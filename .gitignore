@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Dữ liệu thô tải về (tự sinh lại bằng script, không commit)
+data/raw/*.csv
+data/raw/*.parquet
+data/raw/*.zip
+
+# Cache & log
+.cache/
+*.log
+.pytest_cache/
+
+# Công cụ
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Mô hình huấn luyện lại được bằng ml/train_eta.py (nặng, không commit)
+ml/models/*.joblib
+
+# Dataset ETA sinh lại bằng ml/build_dataset.py
+data/processed/eta_*.csv
