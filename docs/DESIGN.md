@@ -232,3 +232,32 @@ nếu không thì cú click bị chuyển sang thẻ `<svg>` và thẻ nổi kh�
 
 Phát hiện thêm khi làm: bộ phím tắt (`/`, `F`, `0`, `+`, `-`, `Esc`) trước đó **chưa từng hoạt động** vì
 handler cũ bị ghi đè — nay đã chạy đúng và `Esc` cũng đóng drawer/modal đúng thứ tự.
+
+## 13. Bản v7 — nhận diện thương hiệu và 6 điểm còn lại
+
+### Hình ảnh thương hiệu
+
+- `web/assets/banner.jpg` (1024×572) — banner giới thiệu, nền kem khớp `#faf5e8`, ba trụ cột in trên ảnh.
+- `web/assets/avatar.jpg` (1086×1086) — chân dung điều phối viên, dùng làm mascot và favicon.
+
+Ba vị trí đặt ảnh, không chỗ nào đè lên bản đồ hay số liệu:
+
+| Vị trí | Chi tiết |
+|---|---|
+| Logo rail trái | Thay ô chữ "D" bằng avatar bo góc 10px; hover phóng 1,05 và viền cam; tooltip "DuDu — Giới thiệu hệ thống"; favicon đổi theo |
+| Modal giới thiệu | Tự mở lần đầu (cờ `localStorage.dudu_intro_seen`), hoặc mở lại bằng avatar / chữ DuDu trên header; banner hiển thị trọn 16:9 (không cắt chữ) trên nền kem, 3 thẻ mô tả ba bài toán, CTA "Bắt đầu điều phối →", checkbox "Không tự hiện lại"; đóng bằng CTA, ×, Esc, bấm nền |
+| Toast trạng thái | Giữ nguyên, không chèn ảnh để tránh rối |
+
+### Sáu điểm còn lại
+
+| Góp ý | Cách xử lý | Kiểm chứng |
+|---|---|---|
+| Dải sự cố 2 tầng, ép lùn bản đồ | Nén thành **một dòng 48px**: `Sự cố Xe hỏng │ Quãng đường 187 km (+27) │ Đơn trễ 2 (+1) │ Vi phạm chặn 3 (+3) │ ↺ Hoàn tác` | Đo được `height = 48` ở 1366 và 1920 |
+| Tràn lề phải ở "Kho đóng" | Nút hoàn tác đổi sang `inline-flex` rộng 92px, không wrap; dòng `… phút xe chạy` cắt ellipsis thay vì đẩy khung | `scrollWidth = 1366/1920 = viewport`, nút ↺ kết thúc ở 1352/1902 |
+| Bản đồ còn thừa khoảng trắng | Zoom mặc định 1,08× → **1,22×**, lưới nền phủ toàn khung | Nhãn `zoom 1,0×` (mức fit mới) |
+| Icon rail kẹt khi đóng drawer/modal | `closeDrawer()` và `closeModal()` đều trả active về Điều phối | Esc sau khi mở bảng so sánh → `dispatch` |
+| So sánh chiến lược thiếu nhãn, lệch tên | Đổi "Hungary — bài toán gán" → **Hungarian**; thêm pill **Đang dùng** cho cả dòng chia đơn và dòng xếp tuyến | 2 pill, đúng hai dòng đang chạy |
+| R06 gắn mã đơn lẻ | Luật cấp tài xế (R06, R10) hiển thị **biển số · loại xe** thay vì mã đơn | "51G-160.82 · Xe tải nhỏ 500kg" |
+| Câu chữ Kẹt xe tự mâu thuẫn | Đổi thành "…tăng 40%; tác tử sẽ tính lại tuyến nên quãng đường có thể thay đổi" | Đọc lại từ API |
+
+Ảnh: `giao-dien-gioi-thieu.png`, `giao-dien-dieu-phoi-1366.png`, `giao-dien-su-co.png`.

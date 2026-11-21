@@ -74,7 +74,7 @@ function fitView() {
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
-  const zoom = 1.08;
+  const zoom = 1.22;
   w /= zoom;
   h /= zoom;
   state.view = { x: cx - w / 2, y: cy - h / 2, w, h };
@@ -663,7 +663,11 @@ function renderViolations(violations, initial) {
   box.innerHTML = shown.length ? shown
     .map((violation) => {
       const order = state.ordersById[violation.order_id];
-      const who = order ? `${order.code} · ${order.shop}` : "";
+      const vehicle = state.vehiclesById[violation.vehicle_id];
+      const driverLevel = violation.rule_id === "R06" || violation.rule_id === "R10";
+      const who = driverLevel && vehicle
+        ? `${vehicle.plate} · ${vehicle.label}`
+        : order ? `${order.code} · ${order.shop}` : "";
       return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" title="Bấm để xem trên bản đồ">
         <span class="v-id">${violation.rule_id}</span>
         <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}${who ? ` · ${who}` : ""}</span></span>
@@ -706,22 +710,21 @@ function renderIncidentStrip(result) {
     const diff = roundedAfter - roundedBefore;
     const cls = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
     const arrow = Math.abs(diff) < 0.05 ? "±" : diff > 0 ? "+" : "−";
-    return `<div class="incident-cell">
-      <span>${label} · trước ${viNum(roundedBefore, digits)}${unit}</span>
+    return `<span class="inc-cell">
+      <span class="inc-name">${label}</span>
       <b>${viNum(roundedAfter, digits)}${unit}</b>
       <span class="pill-delta ${cls}">${arrow}${viNum(Math.abs(diff), digits)}${unit}</span>
-    </div>`;
+    </span>`;
   };
   strip.innerHTML = `
-    <div class="incident-strip-head">
-      <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
-        Sự cố <b>${INCIDENT_LABEL[result.incident?.kind] || ""}</b>
-      </span>
-      <button id="incident-undo" class="btn-quiet undo-btn" title="Hoàn tác sự cố, quay lại kế hoạch gốc" aria-label="Hoàn tác sự cố">↺</button>
-    </div>
+    <span class="inc-label">Sự cố <b>${INCIDENT_LABEL[result.incident?.kind] || ""}</b></span>
+    <span class="inc-sep"></span>
     ${cell("Quãng đường", before.total_km, after.total_km, " km")}
+    <span class="inc-sep"></span>
     ${cell("Đơn trễ", before.late_count, after.late_count, "")}
-    ${cell("Vi phạm chặn", before.blocked ?? 0, after.blocked ?? 0, "")}`;
+    <span class="inc-sep"></span>
+    ${cell("Vi phạm chặn", before.blocked ?? 0, after.blocked ?? 0, "")}
+    <button id="incident-undo" class="btn-quiet undo-btn" title="Hoàn tác sự cố, quay lại kế hoạch gốc" aria-label="Hoàn tác sự cố">↺ Hoàn tác</button>`;
   strip.hidden = false;
   state.incident = {
     kind: result.incident?.kind,
@@ -756,6 +759,7 @@ function openDrawer(kicker, title, html) {
 function closeDrawer() {
   $("#drawer").hidden = true;
   $("#drawer").classList.remove("wide");
+  setRailActive("dispatch");
 }
 
 function openOrder(orderId, route, options = {}) {
@@ -1280,10 +1284,20 @@ async function openCompare() {
     data.assignment.indexOf(best(data.assignment, "total_km")),
   );
 
+  const ROUTING_KEY = {
+    "Thứ tự nhập": "random",
+    "Nearest Neighbor": "nearest",
+    "NN + 2-opt": "two_opt",
+    "Clarke–Wright": "savings",
+    "C-W + 2-opt": "savings_2opt",
+    "NN + 2-opt (hạn giao)": "deadline",
+  };
+  const currentRouting = state.plan?.strategy?.routing;
   const routingHtml = table(
     ["Chiến lược xếp tuyến", "km", "phút", "trễ", "phút trễ"],
     data.routing.map((row) => [
-      row.routing,
+      row.routing + (ROUTING_KEY[row.routing] === currentRouting
+        ? '<span class="pill-now">Đang dùng</span>' : ""),
       fmt1(row.total_km),
       fmt1(row.total_min),
       String(row.late_count),
@@ -1305,7 +1319,7 @@ function strategyLabel(key) {
     random: "Chia vòng tròn (thủ công)",
     greedy: "Tham lam — xe gần nhất",
     savings: "Clarke–Wright — tự gộp tuyến",
-    hungarian: "Hungary — bài toán gán",
+    hungarian: "Hungarian — bài toán gán",
   }[key] || key;
 }
 
@@ -1338,6 +1352,20 @@ function setRailActive(view) {
 function closeModal() {
   $("#modal").hidden = true;
   setRailActive("dispatch");
+}
+
+function openIntro() {
+  $("#intro").hidden = false;
+}
+
+function closeIntro(save) {
+  const box = $("#intro");
+  if (box.hidden) return;
+  box.hidden = true;
+  if (save) {
+    if ($("#intro-hide").checked) localStorage.setItem("dudu_intro_seen", "1");
+    else localStorage.removeItem("dudu_intro_seen");
+  }
 }
 
 /* ---------------------------------------------------------------- boot */
@@ -1433,6 +1461,13 @@ async function loadEtaInfo() {
     setCompact(!document.querySelector(".shell").classList.contains("is-compact"));
   });
 
+  $("#brand-btn").addEventListener("click", openIntro);
+  $("#brand-title").addEventListener("click", openIntro);
+  $("#intro-close").addEventListener("click", () => closeIntro(true));
+  $("#intro-start").addEventListener("click", () => closeIntro(true));
+  $("#intro").addEventListener("click", (event) => { if (event.target.id === "intro") closeIntro(true); });
+  if (!localStorage.getItem("dudu_intro_seen")) openIntro();
+
   $("#drawer-close").addEventListener("click", closeDrawer);
   $("#modal-close").addEventListener("click", closeModal);
   $("#modal").addEventListener("click", (event) => { if (event.target.id === "modal") closeModal(); });
@@ -1440,6 +1475,7 @@ async function loadEtaInfo() {
     const typing = event.target.matches("input, select, textarea");
     if (event.key === "Escape") {
       if (typing) { event.target.blur(); return; }
+      if (!$("#intro").hidden) { closeIntro(true); return; }
       closeModal();
       closeDrawer();
       return;
@@ -1452,6 +1488,9 @@ async function loadEtaInfo() {
     else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
+
+
 
 
 

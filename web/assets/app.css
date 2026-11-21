@@ -891,3 +891,68 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 .incident-bar .incident-cell { background: #fdf6f0; padding: 7px 18px; }
 
 
+
+/* ============ v7: mascot, intro modal, dải sự cố 1 dòng ============ */
+
+.mark { padding: 0; border: 1px solid #3a3f47; background: #1c1f25; overflow: hidden; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mark:hover { transform: scale(1.05); border-color: rgba(217,93,36,.75); box-shadow: 0 0 0 2px rgba(217,93,36,.28); }
+.brand-name { border: 0; background: transparent; padding: 0; cursor: pointer; }
+.brand-name:hover { color: var(--accent); }
+
+/* modal giới thiệu */
+.intro {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  padding: 24px; background: rgba(21,23,28,.5);
+}
+.intro[hidden] { display: none; }
+.intro-card {
+  width: min(900px, 100%); max-height: 92vh; overflow: auto;
+  background: #faf5e8; border-radius: 14px; border: 1px solid #e6dcc4;
+  box-shadow: 0 30px 70px rgba(21,23,28,.32); position: relative;
+}
+.intro-banner { width: 100%; display: block; border-radius: 14px 14px 0 0; }
+.intro-close { position: absolute; top: 10px; right: 12px; background: rgba(250,245,232,.9); border-radius: 50%; width: 30px; height: 30px; }
+.intro-body { padding: 18px 24px 22px; }
+.intro-body h2 { margin: 0 0 4px; font-size: 20px; }
+.intro-sub { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; }
+.intro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.intro-sm { background: #fff; border: 1px solid #e6dcc4; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.intro-sm span { font-family: var(--mono); font-size: 10.5px; color: #d95d24; font-weight: 700; }
+.intro-sm b { font-size: 13px; }
+.intro-sm i { font-style: normal; font-size: 11.5px; color: var(--ink-3); }
+.intro-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.intro-check { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.intro-check input { accent-color: var(--accent); }
+
+/* dải sự cố 1 dòng */
+.incident-bar { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 18px; background: #fdf6f0; border-bottom: 1px solid var(--line); overflow: hidden; }
+.incident-bar[hidden] { display: none; }
+.incident-bar .inc-label { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+.incident-bar .inc-label b { font-size: 11.5px; color: var(--alert); }
+.incident-bar .inc-cell { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.incident-bar .inc-cell span.inc-name { font-size: 11px; color: var(--ink-3); }
+.incident-bar .inc-cell b { font-family: var(--mono); font-size: 13.5px; }
+.incident-bar .pill-delta { font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border-radius: 20px; white-space: nowrap; }
+.incident-bar .pill-delta.up { background: #f3d3cd; color: var(--alert); }
+.incident-bar .pill-delta.down { background: var(--teal-soft); color: var(--teal); }
+.incident-bar .pill-delta.flat { background: #ece7dd; color: var(--ink-3); }
+.incident-bar .inc-sep { width: 1px; height: 20px; background: var(--line); flex: none; }
+.incident-bar #incident-undo { margin-left: auto; }
+
+/* chống tràn ngang header */
+.topbar { min-width: 0; }
+.kpi-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1440px) { .kpi-note { max-width: 300px; } }
+
+/* v7.1: sửa nút hoàn tác bị bóp, banner intro trên màn hình thấp */
+.incident-bar #incident-undo {
+  width: auto; min-width: 92px; height: 28px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 11.5px; white-space: nowrap; flex: none;
+}
+.intro-banner { max-height: 46vh; object-fit: contain; background: #faf5e8; }
+.intro-actions { position: sticky; bottom: 0; background: #faf5e8; padding: 10px 0 2px; }
+@media (max-width: 1440px) {
+  .incident-bar { gap: 10px; padding: 0 14px; }
+}

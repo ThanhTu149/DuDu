@@ -197,7 +197,7 @@ class DispatcherAgent:
         if kind == "congestion":
             self.time_multiplier = 1.4
             self._log("perceive", "Sự cố: kẹt xe diện rộng",
-                      "toàn bộ thời gian di chuyển tăng 40%, quãng đường không đổi.")
+                      "toàn bộ thời gian di chuyển tăng 40%; tác tử sẽ tính lại tuyến nên quãng đường có thể thay đổi.")
             return self._replan_after_removal()
 
         if kind == "depot_closed" and hub_id:
@@ -248,6 +248,7 @@ class DispatcherAgent:
             "steps": [s.as_dict() for s in self.steps],
             "strategy": {"assignment": self.assignment_strategy, "routing": self.routing_strategy, "eta": "ml" if self.eta_model else "osrm"},
         }
+
 
 
 

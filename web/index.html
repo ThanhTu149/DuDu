@@ -4,14 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DuDu — Điều phối giao hàng nội thành</title>
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/assets/avatar.jpg" type="image/jpeg" />
 <link rel="stylesheet" href="/assets/app.css" />
 </head>
 <body>
 <div class="app">
 
   <aside class="rail">
-    <div class="mark" aria-hidden="true">D</div>
+    <button id="brand-btn" class="mark" type="button" aria-label="DuDu — Giới thiệu hệ thống" title="DuDu — Giới thiệu hệ thống">
+      <img src="/assets/avatar.jpg" alt="" />
+    </button>
     <nav class="rail-nav" aria-label="Khu vực chính">
       <button class="rail-btn is-active" data-view="dispatch" data-label="Điều phối" aria-label="Bảng điều phối">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
@@ -33,7 +35,7 @@
 
     <header class="topbar">
       <div class="brand">
-        <span class="brand-name">DuDu</span>
+        <button id="brand-title" class="brand-name" type="button" title="Giới thiệu hệ thống">DuDu</button>
         <span class="brand-sub">Điều phối giao hàng nội thành</span>
       </div>
 
@@ -215,8 +217,30 @@
   </div>
 </div>
 
+<div id="intro" class="intro" hidden>
+  <div class="intro-card" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+    <button id="intro-close" class="btn-close intro-close" aria-label="Đóng">×</button>
+    <img class="intro-banner" src="/assets/banner.jpg"
+         alt="DuDu — hệ thống điều phối và tối ưu giao hàng nội thành" />
+    <div class="intro-body">
+      <h2 id="intro-title">Chào mừng đến với DuDu</h2>
+      <p class="intro-sub">Chia đơn, xếp tuyến, giữ cam kết giờ giao — tất cả trên một màn hình điều phối.</p>
+      <div class="intro-grid">
+        <div class="intro-sm"><span>01</span><b>Tối ưu tuyến đường</b><i>Nearest Neighbor + 2-opt, có hạn giao</i></div>
+        <div class="intro-sm"><span>02</span><b>Dự đoán ETA</b><i>Random Forest trên 200.000 chuyến thật</i></div>
+        <div class="intro-sm"><span>03</span><b>Phân bổ đơn hàng</b><i>Hungarian + tác tử đối chiếu 12 luật</i></div>
+      </div>
+      <div class="intro-actions">
+        <label class="intro-check"><input id="intro-hide" type="checkbox" checked /> Không tự hiện lại lần sau</label>
+        <button id="intro-start" class="btn btn-primary">Bắt đầu điều phối →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
 
 
