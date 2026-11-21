@@ -566,11 +566,13 @@ function openDrawer(kicker, title, html) {
 
 function closeDrawer() {
   $("#drawer").hidden = true;
+  $("#drawer").classList.remove("wide");
 }
 
-function openOrder(orderId, route) {
+function openOrder(orderId, route, options = {}) {
   const order = state.ordersById[orderId];
   if (!order) return;
+  $("#drawer").classList.remove("wide");
   const stop = route?.stops.find((item) => item.order_id === orderId);
   const vehicle = route ? state.vehiclesById[route.vehicle_id] : null;
   const due = 8 * 60 + order.promised_min;
@@ -597,10 +599,11 @@ function openOrder(orderId, route) {
        </div>`).join("")
     : '<p class="empty" style="margin:0">Không có luật nào kích hoạt trên đơn này.</p>';
 
+  const back = options.back ? '<button class="btn-quiet" id="drawer-back" style="margin-bottom:12px">← Danh sách đơn</button>' : "";
   openDrawer(
     `Chi tiết đơn · ${order.code}`,
     order.shop,
-    `<div class="drawer-section">
+    `${back}<div class="drawer-section">
        <dl class="kv">${kv.map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("")}</dl>
      </div>
      <div class="drawer-section">
@@ -610,6 +613,7 @@ function openOrder(orderId, route) {
      ${route ? '<div class="drawer-actions"><button class="btn btn-ghost" id="drawer-open-route">Xem cả tuyến</button></div>' : ""}`,
   );
 
+  $("#drawer-back")?.addEventListener("click", openOrders);
   const button = $("#drawer-open-route");
   if (button) button.addEventListener("click", () => openVehicle(route.vehicle_id));
 }
@@ -617,6 +621,7 @@ function openOrder(orderId, route) {
 function openVehicle(vehicleId) {
   const route = state.plan?.routes.find((item) => item.vehicle_id === vehicleId);
   if (!route) return;
+  $("#drawer").classList.remove("wide");
   const vehicle = state.vehiclesById[vehicleId];
   const lateMinutes = route.late_minutes ?? 0;
 
@@ -657,6 +662,216 @@ function openVehicle(vehicleId) {
   setActiveRoute(vehicleId);
 }
 
+/* ------------------------------------------------------------ bảng đơn */
+const ORDER_COLUMNS = [
+  { key: "code", label: "Mã đơn" },
+  { key: "shop", label: "Cửa hàng" },
+  { key: "district", label: "Quận" },
+  { key: "goods", label: "Hàng" },
+  { key: "weight", label: "kg", num: true },
+  { key: "due", label: "Hạn", num: true },
+  { key: "arrive", label: "Tới", num: true },
+  { key: "status", label: "Trạng thái" },
+  { key: "driver", label: "Tài xế" },
+];
+
+function orderIndex() {
+  const index = new Map();
+  for (const route of state.plan?.routes || []) {
+    for (const stop of route.stops) index.set(stop.order_id, { route, stop });
+  }
+  return index;
+}
+
+function orderRows() {
+  const index = orderIndex();
+  const rows = [];
+  for (const order of Object.values(state.ordersById)) {
+    const hub = state.hubs.find((item) => item.id === order.dest_hub);
+    const hit = index.get(order.id);
+    rows.push({
+      id: order.id,
+      code: order.code,
+      shop: order.shop,
+      district: hub?.district || "",
+      goods: order.goods_label,
+      weight: order.weight_kg,
+      due: 8 * 60 + order.promised_min,
+      arrive: hit ? hit.stop.arrive_min : null,
+      status: hit ? (hit.stop.late ? "trễ" : "đúng") : "chưa xếp",
+      driver: hit ? `${hit.route.plate}` : "—",
+      route: hit?.route,
+    });
+  }
+  return rows;
+}
+
+function openOrders() {
+  const drawer = $("#drawer");
+  drawer.classList.add("wide");
+  drawer.hidden = false;
+  state.orderSort = state.orderSort || { key: "code", dir: 1 };
+  $("#drawer-kicker").textContent = `${Object.keys(state.ordersById).length} đơn trong ca`;
+  $("#drawer-title").textContent = "Danh sách đơn";
+
+  const districts = [...new Set(Object.values(state.ordersById).map(
+    (order) => state.hubs.find((hub) => hub.id === order.dest_hub)?.district).filter(Boolean))].sort();
+
+  $("#drawer-body").innerHTML = `
+    <div class="orders-head">
+      <input id="orders-q" type="search" placeholder="Tìm mã đơn, cửa hàng…" aria-label="Tìm trong danh sách" />
+      <select id="orders-status" aria-label="Lọc trạng thái">
+        <option value="all">Mọi trạng thái</option>
+        <option value="late">Chỉ đơn trễ</option>
+        <option value="ok">Đúng hạn</option>
+        <option value="none">Chưa xếp</option>
+      </select>
+      <select id="orders-district" aria-label="Lọc quận">
+        <option value="all">Mọi quận</option>
+        ${districts.map((district) => `<option value="${district}">${district}</option>`).join("")}
+      </select>
+    </div>
+    <div style="overflow:auto; max-height: calc(100vh - 190px)">
+      <table class="orders-table">
+        <thead><tr>${ORDER_COLUMNS.map((column) => `<th data-key="${column.key}" class="${column.num ? "num" : ""}">${column.label}</th>`).join("")}</tr></thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>`;
+
+  const apply = () => {
+    const query = $("#orders-q").value.trim().toLowerCase();
+    const status = $("#orders-status").value;
+    const district = $("#orders-district").value;
+    const { key, dir } = state.orderSort;
+
+    let rows = orderRows();
+    if (query) rows = rows.filter((row) => `${row.code} ${row.shop} ${row.district} ${row.goods}`.toLowerCase().includes(query));
+    if (status === "late") rows = rows.filter((row) => row.status === "trễ");
+    if (status === "ok") rows = rows.filter((row) => row.status === "đúng");
+    if (status === "none") rows = rows.filter((row) => row.status === "chưa xếp");
+    if (district !== "all") rows = rows.filter((row) => row.district === district);
+
+    rows.sort((a, b) => {
+      const left = a[key] ?? -1;
+      const right = b[key] ?? -1;
+      if (typeof left === "number" && typeof right === "number") return (left - right) * dir;
+      return String(left).localeCompare(String(right), "vi") * dir;
+    });
+
+    $("#orders-body").innerHTML = rows.length ? rows.map((row) => `
+      <tr data-order="${row.id}">
+        <td class="mono">${row.code}</td>
+        <td>${row.shop}</td>
+        <td>${row.district}</td>
+        <td>${row.goods}</td>
+        <td class="num">${fmt1(row.weight)}</td>
+        <td class="num">${clockLabel(row.due)}</td>
+        <td class="num">${row.arrive == null ? "—" : clockLabel(row.arrive)}</td>
+        <td>${row.status === "trễ" ? '<span class="tag-late">trễ</span>' : row.status}</td>
+        <td class="mono">${row.driver}</td>
+      </tr>`).join("") : '<tr><td colspan="9" class="orders-empty">Không có đơn nào khớp bộ lọc.</td></tr>';
+
+    document.querySelectorAll(".orders-table th").forEach((th) => {
+      th.classList.toggle("is-sorted", th.dataset.key === key);
+      th.textContent = ORDER_COLUMNS.find((column) => column.key === th.dataset.key).label
+        + (th.dataset.key === key ? (dir > 0 ? " ↑" : " ↓") : "");
+    });
+
+    document.querySelectorAll("#orders-body tr[data-order]").forEach((tr) => {
+      tr.addEventListener("click", () => {
+        const row = rows.find((item) => item.id === tr.dataset.order);
+        openOrder(row.id, row.route, { back: true });
+      });
+    });
+  };
+
+  document.querySelectorAll(".orders-table th").forEach((th) => {
+    th.dataset.label = th.textContent;
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      state.orderSort = state.orderSort.key === key
+        ? { key, dir: -state.orderSort.dir }
+        : { key, dir: 1 };
+      apply();
+    });
+  });
+
+  ["#orders-q", "#orders-status", "#orders-district"].forEach((selector) => {
+    $(selector).addEventListener("input", apply);
+    $(selector).addEventListener("change", apply);
+  });
+
+  apply();
+}
+
+/* ------------------------------------------------------- dòng thời gian */
+function renderGantt() {
+  const box = $("#gantt");
+  if (!state.plan) {
+    box.innerHTML = '<p class="gantt-empty">Chưa có kế hoạch.</p>';
+    return;
+  }
+  const routes = state.plan.routes.filter((route) => route.stops.length);
+  const start = 8 * 60;
+  const end = Math.max(12 * 60, ...routes.map((route) => lastArrival(route)));
+  const width = Math.max(560, (box.clientWidth || 640) - 32);
+  const left = 88;
+  const top = 30;
+  const rowHeight = 24;
+  const height = top + routes.length * rowHeight + 18;
+  const x = (minute) => left + ((minute - start) / (end - start)) * (width - left - 12);
+  const parts = [];
+
+  for (let minute = Math.ceil(start / 60) * 60; minute <= end; minute += 60) {
+    parts.push(`<line class="g-grid" x1="${x(minute).toFixed(1)}" y1="${top - 8}" x2="${x(minute).toFixed(1)}" y2="${height - 8}"/>`);
+    parts.push(`<text class="g-tick" x="${x(minute).toFixed(1)}" y="14" text-anchor="middle">${clockLabel(minute)}</text>`);
+  }
+
+  routes.forEach((route, index) => {
+    const y = top + index * rowHeight;
+    const color = ROUTE_COLORS[state.plan.routes.indexOf(route) % ROUTE_COLORS.length];
+    parts.push(`<text class="g-label" x="0" y="${y + 13}">${route.plate}</text>`);
+    parts.push(`<rect x="${left}" y="${y + 3}" width="${(width - left - 12).toFixed(1)}" height="16" fill="#f1ece1" rx="3" opacity="0.55"/>`);
+    for (const stop of route.stops) {
+      const from = x(stop.arrive_min);
+      const to = Math.max(from + 2, x(stop.arrive_min + stop.service_min));
+      parts.push(`<rect class="g-block" x="${from.toFixed(1)}" y="${y + 3}" width="${(to - from).toFixed(1)}" height="16" fill="${stop.late ? "#b3261e" : color}" opacity="${stop.late ? 0.9 : 0.78}"><title>${stop.code} · ${clockLabel(stop.arrive_min)}${stop.late ? " · trễ" : ""}</title></rect>`);
+    }
+  });
+
+  box.innerHTML = `<svg width="${width}" height="${height}" role="img" aria-label="Dòng thời gian giao hàng theo giờ">${parts.join("")}</svg>`;
+}
+
+/* ------------------------------------------------------------ in phiếu */
+function printPlan() {
+  if (!state.plan) return;
+  let area = $("#print-area");
+  if (!area) {
+    document.body.insertAdjacentHTML("beforeend", '<div id="print-area"></div>');
+    area = $("#print-area");
+  }
+  const blocks = state.plan.routes
+    .filter((route) => route.stops.length)
+    .map((route) => {
+      const vehicle = state.vehiclesById[route.vehicle_id];
+      const rows = route.stops.map((stop, index) => {
+        const order = state.ordersById[stop.order_id] || {};
+        return `<tr><td>${index + 1}</td><td>${stop.code}</td><td>${order.shop || ""}</td>
+          <td>${order.address || ""}</td><td>${clockLabel(stop.arrive_min)}</td>
+          <td>${stop.late ? "trễ" : ""}</td><td></td></tr>`;
+      }).join("");
+      return `<div class="p-route">
+        <h2>${route.plate} — ${vehicle.driver} (${vehicle.label}) · ${route.stops.length} điểm · ${fmtKm(route.total_km)} km</h2>
+        <table><thead><tr><th>TT</th><th>Mã đơn</th><th>Cửa hàng</th><th>Địa chỉ</th><th>Giờ tới</th><th>Trạng thái</th><th>Ký nhận</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`;
+    }).join("");
+
+  area.innerHTML = `<h1>Phiếu giao hàng — DuDu</h1>
+    <p class="p-meta">Ca 08:00 · ${state.plan.metrics.orders} đơn · ${state.plan.metrics.total_km.toFixed(0)} km ·
+    ${state.plan.metrics.late_count} đơn trễ · in lúc ${new Date().toLocaleString("vi-VN")}</p>
+    ${blocks}`;
+  window.print();
+}
 /* ---------------------------------------------------------------- tìm kiếm */
 function matchesSearch(order) {
   if (!state.search) return true;
@@ -710,7 +925,9 @@ function paintPlan(plan) {
   renderRoutes(plan.routes);
   renderSteps(plan.steps);
   renderViolations(plan.violations, plan.violations_initial?.length);
+  renderGantt();
   $("#export-btn").disabled = false;
+  $("#print-btn").disabled = false;
   document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
   $("#map-hint").textContent = `${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
 }
@@ -944,6 +1161,24 @@ async function loadEtaInfo() {
   $("#plan-btn").addEventListener("click", runPlan);
   $("#compare-btn").addEventListener("click", openCompare);
   $("#export-btn").addEventListener("click", exportCsv);
+  $("#print-btn").addEventListener("click", printPlan);
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((other) => {
+        const active = other === tab;
+        other.classList.toggle("is-active", active);
+        other.setAttribute("aria-selected", String(active));
+      });
+      const showSteps = tab.dataset.tab === "steps";
+      $("#steps").hidden = !showSteps;
+      $("#gantt").hidden = showSteps;
+      document.querySelector(".shell").classList.toggle("is-timeline", !showSteps);
+      if (!showSteps) {
+        if (document.querySelector(".shell").classList.contains("is-compact")) setCompact(false);
+        renderGantt();
+      }
+    });
+  });
   document.querySelectorAll(".incident").forEach((button) => {
     button.addEventListener("click", () => simulateIncident(button.id.replace("incident-", "").replace("depot", "depot_closed")));
   });
@@ -952,6 +1187,7 @@ async function loadEtaInfo() {
       document.querySelectorAll(".rail-btn").forEach((other) => other.classList.remove("is-active"));
       button.classList.add("is-active");
       if (button.dataset.view === "rules") openRules();
+      if (button.dataset.view === "orders") openOrders();
       if (button.dataset.view === "compare") openCompare();
       if (button.dataset.view === "dispatch") { $("#modal").hidden = true; closeDrawer(); }
     });
@@ -976,6 +1212,12 @@ async function loadEtaInfo() {
     if (event.key === "Escape") { $("#modal").hidden = true; closeDrawer(); }
   });
 })();
+
+
+
+
+
+
 
 
 

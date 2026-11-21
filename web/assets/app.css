@@ -578,3 +578,76 @@ table.rules th:last-child { white-space: nowrap; width: 92px; }
 @media (max-width: 900px) { .map-controls { top: 8px; right: 8px; } }
 
 
+
+/* ============ v4: bảng đơn, dòng thời gian, in phiếu, skeleton ============ */
+
+.tabs { display: flex; gap: 4px; margin-left: 12px; }
+.tab {
+  border: 1px solid transparent; background: transparent; color: var(--ink-3);
+  font-size: 11.5px; padding: 3px 9px; border-radius: 6px; cursor: pointer; font-weight: 500;
+}
+.tab:hover { color: var(--ink-2); background: #efeae0; }
+.tab.is-active { color: var(--ink); background: #eee8dc; border-color: var(--line); }
+
+.gantt { padding: 8px 16px 12px; overflow: auto; flex: 1; min-height: 0; }
+.gantt svg { display: block; }
+.gantt .g-label { font-size: 10.5px; fill: var(--ink-2); }
+.gantt .g-grid { stroke: #e9e4da; stroke-width: 1; }
+.gantt .g-tick { font-size: 9.5px; fill: var(--ink-3); font-family: var(--mono); }
+.gantt .g-block { rx: 3; }
+.gantt-empty { color: var(--ink-3); font-size: 12.5px; padding: 14px 0; }
+
+/* bảng đơn trong drawer */
+.drawer.wide { width: 780px; max-width: 96vw; }
+.orders-head { display: flex; gap: 8px; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.orders-head input, .orders-head select {
+  border: 1px solid var(--line); border-radius: 7px; background: #fff;
+  font-size: 12px; padding: 5px 8px; color: var(--ink);
+}
+.orders-head input { flex: 1; min-width: 140px; }
+.orders-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.orders-table td, .orders-table th { white-space: nowrap; }
+.orders-table th {
+  position: sticky; top: 0; background: var(--paper-2); text-align: left;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+  padding: 7px 8px; border-bottom: 1px solid var(--line); cursor: pointer; white-space: nowrap;
+}
+.orders-table th:hover { color: var(--ink); }
+.orders-table th.is-sorted { color: var(--accent); }
+.orders-table td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.orders-table tbody tr { cursor: pointer; }
+.orders-table tbody tr:hover { background: #fdf6ef; }
+.orders-table .num { text-align: right; font-family: var(--mono); }
+.orders-table .tag-late { font-size: 11px; }
+.orders-empty { padding: 18px; color: var(--ink-3); font-size: 12.5px; }
+
+/* skeleton khi đang tính */
+.skeleton { border: 1px solid var(--line-soft); border-radius: 9px; padding: 10px 11px; margin-bottom: 6px; background: #fff; }
+.sk-line { height: 9px; border-radius: 4px; background: linear-gradient(90deg, #eee8dc, #f6f2ea, #eee8dc); background-size: 200% 100%; animation: shimmer 1.2s infinite; margin-bottom: 6px; }
+.sk-line.w40 { width: 40%; }
+.sk-line.w70 { width: 70%; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk-line { animation: none; } }
+
+.map-busy { position: absolute; inset: 0; display: grid; place-items: center; z-index: 5; background: rgba(245,242,236,.55); font-size: 12.5px; color: var(--ink-2); }
+.map-busy[hidden] { display: none; }
+
+/* in phiếu giao */
+#print-area { display: none; }
+@media print {
+  body { background: #fff; }
+  .app, .drawer, .modal, .toast, #toast { display: none !important; }
+  #print-area { display: block; font-family: "Times New Roman", serif; color: #000; }
+  #print-area h1 { font-size: 18pt; margin: 0 0 4pt; }
+  #print-area .p-meta { font-size: 10pt; color: #333; margin-bottom: 12pt; }
+  #print-area .p-route { break-inside: avoid; page-break-inside: avoid; margin-bottom: 14pt; }
+  #print-area .p-route h2 { font-size: 12pt; margin: 0 0 4pt; border-bottom: 1px solid #000; padding-bottom: 2pt; }
+  #print-area table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  #print-area th, #print-area td { border: 1px solid #999; padding: 3pt 5pt; text-align: left; }
+  #print-area th { background: #eee; }
+}
+
+.gantt { min-height: 168px; }
+
+.shell.is-timeline { grid-template-rows: 58px 1fr 306px; }
+@media (max-width: 1240px) { .shell.is-timeline { grid-template-rows: auto auto auto; } }

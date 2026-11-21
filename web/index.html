@@ -19,6 +19,9 @@
       <button class="rail-btn" data-view="rules" aria-label="Cơ sở tri thức" title="Cơ sở tri thức">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
       </button>
+      <button class="rail-btn" data-view="orders" aria-label="Danh sách đơn" title="Danh sách đơn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h10v2H4v-2Z"/></svg>
+      </button>
       <button class="rail-btn" data-view="compare" aria-label="So sánh chiến lược" title="So sánh chiến lược">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4V10H4v10Zm6 0h4V4h-4v16Zm6 0h4v-7h-4v7Z"/></svg>
       </button>
@@ -80,6 +83,10 @@
             <button id="export-btn" class="btn btn-quiet" disabled title="Tải kế hoạch dạng CSV">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v9l3.5-3.5 1.4 1.4L12 17.8 6.1 10.9 7.5 9.5 11 13V4ZM5 19h14v2H5v-2Z"/></svg>
               CSV
+            </button>
+            <button id="print-btn" class="btn btn-quiet" disabled title="In phiếu giao">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7V3Zm-3 6h16v7h-3v5H7v-5H4V9Zm5 6v4h6v-4H9Zm9-3.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>
+              In
             </button>
           </div>
         </div>
@@ -143,10 +150,15 @@
     <footer class="panel log-panel">
       <div class="log-col">
         <div class="panel-head">
-          <h2>Nhật ký quyết định của tác tử</h2>
+          <h2>Quyết định của tác tử</h2>
+          <div class="tabs" role="tablist">
+            <button class="tab is-active" data-tab="steps" role="tab" aria-selected="true">Nhật ký</button>
+            <button class="tab" data-tab="gantt" role="tab" aria-selected="false">Dòng thời gian</button>
+          </div>
           <button id="log-toggle" class="btn-quiet log-toggle" aria-expanded="true">Thu gọn</button>
         </div>
         <ol id="steps" class="steps"><li class="empty">Chưa chạy.</li></ol>
+        <div id="gantt" class="gantt" hidden></div>
       </div>
       <div class="log-col">
         <div class="panel-head"><h2>Đối chiếu cơ sở luật</h2><span id="violations-meta" class="pill">—</span></div>
@@ -179,5 +191,6 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
 
 

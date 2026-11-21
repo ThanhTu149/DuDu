@@ -145,3 +145,22 @@ trên khung bản đồ để kéo không bị trình duyệt cuộn trang.
 
 Ảnh: `docs/hinh/giao-dien-dieu-phoi.png` (vừa khung), `giao-dien-zoom.png` (đã phóng và kéo),
 `giao-dien-gon.png` (chế độ gọn), `giao-dien-tuyen.png` (drawer tuyến).
+
+## 10. Bản v4 — bảng đơn, dòng thời gian, in phiếu
+
+| Thêm | Chi tiết |
+|---|---|
+| **Danh sách đơn** | Nút "Danh sách đơn" ở rail trái mở drawer rộng 780px: 48 đơn, sắp xếp bằng cách bấm tiêu đề cột, lọc theo trạng thái và quận, tìm theo mã/cửa hàng. Bấm một dòng mở chi tiết đơn (có nút quay lại danh sách) |
+| **Dòng thời gian** | Tab thứ hai ở panel dưới: mỗi tài xế một hàng, trục 08:00–12:00, mỗi điểm giao là một khối màu theo tuyến, khối đỏ là đơn trễ. Rê chuột xem mã đơn + giờ |
+| **In phiếu giao** | Nút "In" dựng vùng in riêng (`#print-area`) rồi gọi `window.print()`: mỗi tuyến một bảng, có cột ký nhận, ngắt trang giữa các tuyến |
+| **Khung xương khi tính** | Danh sách tuyến thay bằng 4 thẻ skeleton nhấp nháy, bản đồ phủ lớp "Đang lập kế hoạch…", tôn trọng `prefers-reduced-motion` |
+| **Design tokens** | `docs/design-system/tokens.json` theo định dạng W3C DTCG — import thẳng vào Figma bằng plugin Tokens Studio |
+
+Cách dùng token cho Figma: cài plugin **Tokens Studio for Figma** → Import → chọn
+`docs/design-system/tokens.json`. Toàn bộ màu, cỡ chữ, khoảng cách, bán kính, breakpoint và
+kích thước panel sẽ thành biến trong Figma, dựng lại giao diện chỉ là kéo component.
+
+Trạng thái tab được nhớ trong phiên: mở "Dòng thời gian" thì panel dưới cao lên 306px và tự mở
+rộng nếu đang ở chế độ gọn.
+
+Ảnh: `giao-dien-don-hang.png`, `giao-dien-gantt.png`, `giao-dien-in.png`.
