@@ -1018,3 +1018,70 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 .kpi-strip #kpi-ontime { gap: 0; }
 .rail { padding-bottom: 28px; }
 .rail-foot { color: #b3ada6; }
+
+/* ============ v9: thẻ Biệt đội DuDu, avatar trong nhật ký & toast ============ */
+
+.mascot {
+  position: absolute; left: 14px; bottom: 40px; width: 222px; z-index: 6;
+  background: rgba(250, 245, 232, .95); backdrop-filter: blur(6px);
+  border: 1px solid #e5dccb; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 10px 26px rgba(21, 23, 28, .12);
+}
+.mascot[hidden] { display: none; }
+.mascot-fold {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: 20px; height: 20px; border-radius: 6px; border: 1px solid #e5dccb;
+  background: rgba(255, 255, 255, .88); color: #57534e; cursor: pointer;
+  font-size: 13px; line-height: 1; display: grid; place-items: center;
+}
+.mascot-fold:hover { background: #fff; color: var(--accent); }
+.mascot-photo {
+  display: block; width: 100%; aspect-ratio: 16 / 10; padding: 0; border: 0;
+  background: #faf5e8; overflow: hidden; cursor: pointer;
+}
+.mascot-photo img {
+  width: 100%; height: 100%; object-fit: cover; object-position: 96% 58%;
+  transform: scale(1.62); transform-origin: 96% 58%; display: block;
+}
+.mascot-status {
+  margin: 0; padding: 7px 10px; font-size: 11px; line-height: 1.35;
+  color: #57534e; border-top: 1px solid rgba(229, 220, 203, .9); min-height: 31px;
+}
+.mascot-status b { color: var(--accent); font-weight: 600; }
+.mascot-pill {
+  position: absolute; left: 14px; bottom: 40px; z-index: 6;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border-radius: 999px; background: rgba(250, 245, 232, .96);
+  border: 1px solid #e5dccb; font-size: 11.5px; color: #57534e;
+  box-shadow: 0 6px 18px rgba(21, 23, 28, .12); cursor: pointer;
+}
+.mascot-pill:hover { border-color: #d9b08c; color: var(--ink); }
+.mascot-pill img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: block; }
+.mascot-pill[hidden] { display: none; }
+
+/* avatar nhỏ cạnh tiêu đề nhật ký */
+.agent-badge { position: relative; width: 20px; height: 20px; flex: none; display: inline-block; }
+.agent-badge img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.agent-badge i {
+  position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px;
+  border-radius: 50%; background: #22c55e; border: 1.5px solid var(--paper-2);
+}
+
+/* avatar trong toast */
+.toast img.toast-avatar {
+  width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+  vertical-align: -6px; margin-right: 8px;
+}
+
+
+
+
+/* v9.1: bố cục hẹp — đặt cuối tệp để thắng các rule lưới phía trên */
+@media (max-width: 900px) {
+  .shell { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .workspace { grid-template-columns: 1fr; }
+  .side-panel { max-height: 300px; }
+  .app { grid-template-columns: 1fr; }
+  .rail { display: none; }
+}
+

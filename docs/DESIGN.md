@@ -285,3 +285,37 @@ Bốn tiểu tiết còn lại:
 - Badge “2 trễ” trên thẻ tài xế chuyển thành **pill nền đỏ nhạt**, đồng bộ với “3 chặn”; chữ `NHÓM 14` ở rail được nâng lên và sáng hơn; avatar bo 12px kèm viền kem mờ.
 
 Token trong `docs/design-system/` đã cập nhật theo bảng màu mới.
+
+## 15. Bản v9 — Biệt đội DuDu luôn hiện diện
+
+Banner trước đây chỉ sống trong modal chào mừng; giờ nó thành một phần của bảng điều phối.
+
+### Thẻ nổi “Biệt đội Tác tử DuDu”
+
+- Neo trong `.map-wrap` ở góc dưới-trái (`left: 14px; bottom: 40px`), rộng **222px**, cao 184px.
+- Ảnh banner 16:9 trong khung 16:10, `object-fit: cover` + `transform: scale(1.62)` với gốc `96% 58%`
+  để **khoanh đúng cụm nhân vật**: DuDu đeo tai nghe, Gấu Nâu, Gấu Trúc, Gấu Trắng — không dính chữ “DuDu” bên trái.
+- Nền thẻ `rgba(250,245,232,.95)` + `backdrop-filter: blur(6px)`, viền `#e5dccb`, bo 12px, khớp ngôn ngữ thiết kế.
+- Dòng trạng thái sống, cập nhật theo state thật:
+
+| Tình huống | Câu hiển thị |
+|---|---|
+| Vừa lập kế hoạch | “Biệt đội đã tối ưu **48 đơn** · Đúng giờ 97,9%” |
+| Đang xử lý sự cố | “Xe hỏng rồi! Tác tử đang chia lại tuyến…” |
+| Xe hỏng xong | “Đã gánh lại **48 đơn** cho các xe còn lại!” |
+| Kẹt xe xong | “Kẹt xe diện rộng — đã tính lại ETA & tuyến mới · **2 trễ**” |
+| Kho đóng xong | “Kho đóng — đã điều xe sang kho khác và lập lại tuyến!” |
+
+- Bấm ảnh → mở modal giới thiệu; nút `–` thu gọn thành pill `[avatar] Biệt đội DuDu ↗`; bấm pill bung lại.
+- Tự thu gọn khi khung bản đồ hẹp hơn **820px** (đo ở 800×700: `mapW = 762` → pill hiện, thẻ ẩn).
+
+### Hai điểm chạm khác
+
+- **Rail trái** có thêm mục “Giới thiệu DuDu” (icon bóng đèn) mở lại modal bất cứ lúc nào; avatar và chữ DuDu trên header vẫn mở được. `localStorage` chỉ quyết định việc **tự bật lần đầu**, không khoá việc mở tay.
+- **Nhật ký tác tử** có avatar 20px kèm chấm xanh online trước tiêu đề; **toast** có avatar 22px ở đầu câu.
+
+### Lỗi bố cục phát hiện thêm
+
+Ở màn hình ≤900px, `.app` khai báo `grid-template-columns: 0 1fr` và ẩn rail, nên `.shell` rơi vào cột 0px → toàn bộ nội dung co về 0, nút “Lập kế hoạch” bị KPI đè lên. Đã sửa thành `1fr`, đồng thời đặt lại lưới `.shell` 4 hàng ở cuối tệp CSS để thắng các rule cũ.
+
+Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-su-co.png`, `giao-dien-gioi-thieu.png`.

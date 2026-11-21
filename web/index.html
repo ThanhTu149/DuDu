@@ -15,6 +15,9 @@
       <img src="/assets/avatar.jpg" alt="" />
     </button>
     <nav class="rail-nav" aria-label="Khu vực chính">
+      <button class="rail-btn" data-view="intro" data-label="Giới thiệu DuDu" aria-label="Giới thiệu DuDu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 0 1 4 12.7V19h-2v-2.4a7 7 0 0 0-4 0V19H8v-3.3A7 7 0 0 1 12 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm-1 9v-2h2v2h-2Zm0-8h2v5h-2V6Z"/></svg>
+      </button>
       <button class="rail-btn is-active" data-view="dispatch" data-label="Điều phối" aria-label="Bảng điều phối">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
       </button>
@@ -114,6 +117,16 @@
           <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet" role="img"
                aria-label="Bản đồ 16 nút giao hàng tại TP.HCM và các tuyến xe"></svg>
           <div id="map-tip" class="map-tip" hidden></div>
+          <div id="mascot" class="mascot">
+            <button id="mascot-fold" class="mascot-fold" aria-label="Thu gọn thẻ Biệt đội" title="Thu gọn">–</button>
+            <button id="mascot-photo" class="mascot-photo" aria-label="Mở giới thiệu DuDu" title="Giới thiệu DuDu">
+              <img src="/assets/banner.jpg" alt="Biệt đội DuDu và ba chú gấu" />
+            </button>
+            <p class="mascot-status" id="mascot-status">Biệt đội đang chờ lệnh…</p>
+          </div>
+          <button id="mascot-pill" class="mascot-pill" hidden title="Mở lại thẻ Biệt đội">
+            <img src="/assets/avatar.jpg" alt="" /> Biệt đội DuDu ↗
+          </button>
           <div class="map-controls" role="group" aria-label="Điều khiển bản đồ">
             <button id="zoom-in" class="map-btn" aria-label="Phóng to" title="Phóng to (+)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>
@@ -171,6 +184,7 @@
     <footer class="panel log-panel">
       <div class="log-col">
         <div class="panel-head">
+          <span class="agent-badge" aria-hidden="true"><img src="/assets/avatar.jpg" alt="" /><i></i></span>
           <h2>Quyết định của tác tử</h2>
           <div class="tabs" role="tablist">
             <button class="tab is-active" data-tab="steps" role="tab" aria-selected="true">Nhật ký</button>
@@ -241,6 +255,7 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
 
 
 

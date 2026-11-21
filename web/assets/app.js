@@ -167,11 +167,64 @@ async function api(path, options) {
 let toastTimer = null;
 function toast(message, kind = "ok") {
   const box = $("#toast");
-  box.textContent = message;
+  box.innerHTML = `<img class="toast-avatar" src="/assets/avatar.jpg" alt="" />${message}`;
   box.classList.toggle("is-error", kind === "error");
   box.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { box.hidden = true; }, 3800);
+}
+
+/* ------------------------------------------------- biệt đội DuDu (mascot) */
+function setMascot(html) {
+  const line = $("#mascot-status");
+  if (line) line.innerHTML = html;
+}
+
+function updateMascotFromPlan() {
+  const metrics = state.plan?.metrics;
+  if (!metrics) {
+    setMascot("Biệt đội đang chờ lệnh — bấm <b>Lập kế hoạch</b> nhé!");
+    return;
+  }
+  setMascot(`Biệt đội đã tối ưu <b>${metrics.orders} đơn</b> · Đúng giờ ${fmt1(metrics.on_time_rate)}%`);
+}
+
+const INCIDENT_PENDING = {
+  breakdown: "Xe hỏng rồi! Tác tử đang chia lại tuyến…",
+  congestion: "Kẹt xe diện rộng — đang tính lại ETA & tuyến…",
+  depot_closed: "Kho đóng — đang tìm kho thay thế…",
+  truck_ban: "Xe tải bị chặn — đang đổi xe…",
+};
+
+function updateMascotFromIncident(kind, result) {
+  if (!result) { updateMascotFromPlan(); return; }
+  const metrics = result.metrics;
+  if (kind === "breakdown") {
+    setMascot(`Đã gánh lại <b>${metrics.orders} đơn</b> cho các xe còn lại!`);
+  } else if (kind === "congestion") {
+    setMascot(`Kẹt xe diện rộng — đã tính lại ETA &amp; tuyến mới · <b>${metrics.late_count} trễ</b>`);
+  } else if (kind === "depot_closed") {
+    setMascot("Kho đóng — đã điều xe sang kho khác và lập lại tuyến!");
+  } else {
+    setMascot(`Đã xử lý sự cố · <b>${metrics.late_count} trễ</b>`);
+  }
+}
+
+function setMascotFolded(folded) {
+  state.mascotFolded = folded;
+  const card = $("#mascot");
+  const pill = $("#mascot-pill");
+  if (!card || !pill) return;
+  card.hidden = folded;
+  pill.hidden = !folded;
+}
+
+function syncMascotWidth() {
+  const wrap = $(".map-wrap");
+  if (!wrap) return;
+  if (wrap.clientWidth < 820) setMascotFolded(true);
+  else if (state.mascotFoldedNarrow) setMascotFolded(false);
+  state.mascotFoldedNarrow = wrap.clientWidth < 820;
 }
 
 /* ---------------------------------------------------------------- bản đồ */
@@ -1128,6 +1181,7 @@ function paintPlan(plan) {
   $("#print-btn").disabled = false;
   document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
   $("#kpi-note").textContent = `${plan.metrics.vehicles_used} xe · ${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
+  updateMascotFromPlan();
 }
 
 async function runPlan() {
@@ -1147,6 +1201,7 @@ async function runPlan() {
       }),
     });
     paintPlan(plan);
+    updateMascotFromPlan();
     toast(`Đã lập kế hoạch: ${plan.metrics.orders} đơn · ${fmtKm(plan.metrics.total_km)} km · ${plan.metrics.late_count} trễ`);
   } catch (error) {
     toast(`Không lập được kế hoạch: ${error.message}`, "error");
@@ -1167,6 +1222,7 @@ async function simulateIncident(kind) {
     eta: $("#use-ml").checked ? "ml" : "osrm",
   };
   if (kind === "breakdown") payload.vehicle_id = used[0].vehicle_id;
+  setMascot(INCIDENT_PENDING[kind] || "Đang xử lý sự cố…");
   try {
     const result = await api("/api/incident", {
       method: "POST",
@@ -1184,8 +1240,10 @@ async function simulateIncident(kind) {
     renderSteps(result.steps);
     renderViolations(result.violations, result.violations_initial?.length);
     renderIncidentStrip(result);
+    updateMascotFromIncident(kind, result);
     toast(`${INCIDENT_LABEL[kind]} — đã lập lại kế hoạch`);
   } catch (error) {
+    updateMascotFromPlan();
     toast(`Không xử lý được sự cố: ${error.message}`, "error");
   }
 }
@@ -1448,6 +1506,7 @@ async function loadEtaInfo() {
       if (button.dataset.view === "rules") openRules();
       if (button.dataset.view === "orders") openOrders();
       if (button.dataset.view === "compare") openCompare();
+      if (button.dataset.view === "intro") { openIntro(); setRailActive("dispatch"); }
       if (button.dataset.view === "dispatch") { closeModal(); closeDrawer(); }
     });
   });
@@ -1465,6 +1524,11 @@ async function loadEtaInfo() {
   });
 
   $("#brand-btn").addEventListener("click", openIntro);
+  $("#mascot-photo").addEventListener("click", openIntro);
+  $("#mascot-fold").addEventListener("click", () => setMascotFolded(true));
+  $("#mascot-pill").addEventListener("click", () => setMascotFolded(false));
+  window.addEventListener("resize", syncMascotWidth);
+  syncMascotWidth();
   $("#brand-title").addEventListener("click", openIntro);
   $("#intro-close").addEventListener("click", () => closeIntro(true));
   $("#intro-start").addEventListener("click", () => closeIntro(true));
@@ -1491,6 +1555,9 @@ async function loadEtaInfo() {
     else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
+
+
 
 
 
