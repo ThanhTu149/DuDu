@@ -2,9 +2,9 @@
   "color": {
     "paper": { "value": "#f5f2ec", "type": "color", "description": "nền toàn màn hình" },
     "paper-2": { "value": "#faf8f4", "type": "color", "description": "mặt phẳng panel" },
-    "ink": { "value": "#15171c", "type": "color", "description": "chữ chính, rail" },
-    "ink-2": { "value": "#4d535c", "type": "color" },
-    "ink-3": { "value": "#858b94", "type": "color" },
+    "ink": { "value": "#1c1917", "type": "color", "description": "chữ chính, rail" },
+    "ink-2": { "value": "#57534e", "type": "color" },
+    "ink-3": { "value": "#6b6560", "type": "color" },
     "line": { "value": "#ddd7cb", "type": "color" },
     "line-soft": { "value": "#e9e4da", "type": "color" },
     "accent": { "value": "#c9490e", "type": "color", "description": "màu nhấn duy nhất" },
@@ -70,3 +70,4 @@
     "drawerWide": { "value": "780", "type": "sizing" }
   }
 }
+

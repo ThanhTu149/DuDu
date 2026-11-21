@@ -62,6 +62,7 @@ class DispatcherAgent:
         self.rules = RuleEngine()
         self.steps: list[Step] = []
         self._t0: float | None = None
+        self._incident_kind: str | None = None
 
     # -- tiện ích -------------------------------------------------------
     def _log(self, stage: str, title: str, detail: str) -> None:
@@ -190,6 +191,7 @@ class DispatcherAgent:
         Cả ba đều dẫn tới cùng một phản ứng của tác tử: nhận biết sự kiện, chia lại đơn theo
         năng lực còn lại, lập lại tuyến và kiểm tra luật.
         """
+        self._incident_kind = kind
         if kind == "truck_ban":
             self._log("perceive", "Sự cố: xe tải bị chặn", f"xe {vehicle_id} không được vào nội thành.")
             return self._replan_after_removal()
@@ -233,8 +235,10 @@ class DispatcherAgent:
         assign_fn = STRATEGIES[self.assignment_strategy]
         assignment = assign_fn(self.net, self.orders, self.vehicles)
         assignment, routes, moves = self._plan(assignment)
-        self._log("act", "Chia lại toàn bộ đơn",
-                  f"{len(self.vehicles)} xe còn lại nhận {len(self.orders)} đơn.")
+        detail = (f"{len(self.vehicles)} xe còn lại nhận {len(self.orders)} đơn."
+                  if self._incident_kind == "breakdown"
+                  else f"Phân bổ lại {len(self.orders)} đơn cho {len(self.vehicles)} xe.")
+        self._log("act", "Chia lại toàn bộ đơn", detail)
         violations = self.rules.check_routes(self.net, routes, self._vehicles_by_id(), self._orders_by_id())
         metrics = summarize(routes)
         metrics["violations"] = len(violations)
@@ -248,6 +252,8 @@ class DispatcherAgent:
             "steps": [s.as_dict() for s in self.steps],
             "strategy": {"assignment": self.assignment_strategy, "routing": self.routing_strategy, "eta": "ml" if self.eta_model else "osrm"},
         }
+
+
 
 
 

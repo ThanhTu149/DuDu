@@ -261,3 +261,27 @@ Ba vị trí đặt ảnh, không chỗ nào đè lên bản đồ hay số li�
 | Câu chữ Kẹt xe tự mâu thuẫn | Đổi thành "…tăng 40%; tác tử sẽ tính lại tuyến nên quãng đường có thể thay đổi" | Đọc lại từ API |
 
 Ảnh: `giao-dien-gioi-thieu.png`, `giao-dien-dieu-phoi-1366.png`, `giao-dien-su-co.png`.
+
+## 14. Bản v8 — tương phản, phân vai font, nhãn bản đồ
+
+Lý do: khi chiếu máy chiếu, chữ phụ xám nhạt bị bạc; badge tiếng Việt dùng mono làm dấu mũ bị bí.
+
+| Hạng mục | Trước | Sau |
+|---|---|---|
+| Chữ chính | `#15171c` | `#1c1917` (ấm hơn, không gắt) |
+| Chữ phụ / nhãn KPI | `#858b94` | `#57534e` (đo được `rgb(87,83,78)`) |
+| Chữ mờ còn lại | `#858b94` | `#6b6560` |
+| Badge tiếng Việt (NHẬN BIẾT, CHẶN, CẢNH BÁO) | mono | **sans** — chỉ số/mã/giờ giữ mono |
+| Nhãn nút & quận trên bản đồ | 8,5–10px | **11px**, màu `#3f3f46`, halo 2,5px |
+| Dòng bảng đơn | 11px / padding 6px | **13px / padding 10px** (dòng cao 40px) |
+| Dải KPI | số và đơn vị rời nhau | chân chữ thẳng, đơn vị 12,5px màu đậm; `97,9%` không còn hở |
+| Viền bản đồ | nhãn sát mép khi zoom 1,22× | padding trên/dưới 74 đơn vị + zoom 1,12× → nhãn cách viền 14–15px |
+
+Bốn tiểu tiết còn lại:
+
+- Luật mức chặn còn sót sau sự cố tô **đỏ** (`.num.bad`), không còn vàng như cảnh báo.
+- Khi đang mô phỏng sự cố, cột số của bảng luật đổi nhãn thành **“Sau sự cố”** và chỉ hiện một số, thay vì `0 → 4` gây hiểu nhầm.
+- Nhật ký sự cố dùng câu đúng ngữ cảnh: xe hỏng → “8 xe còn lại nhận 48 đơn”; kẹt xe/kho đóng → “Phân bổ lại 48 đơn cho 8 xe”.
+- Badge “2 trễ” trên thẻ tài xế chuyển thành **pill nền đỏ nhạt**, đồng bộ với “3 chặn”; chữ `NHÓM 14` ở rail được nâng lên và sáng hơn; avatar bo 12px kèm viền kem mờ.
+
+Token trong `docs/design-system/` đã cập nhật theo bảng màu mới.

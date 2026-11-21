@@ -956,3 +956,65 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 @media (max-width: 1440px) {
   .incident-bar { gap: 10px; padding: 0 14px; }
 }
+
+/* ============ v8: typography, tương phản, nhãn bản đồ, an toàn viền ============ */
+
+:root {
+  --ink: #1c1917;
+  --ink-2: #57534e;
+  --ink-3: #6f6a63;
+  --line: #d9d2c4;
+}
+
+/* chữ phụ đậm hơn để chiếu máy chiếu không bạc */
+.brand-sub, .kpi-label, .hint, .route-sub, .route-foot, .step-ms, .hub-label,
+.district-label, .orders-table th, .intro-sub, .pop-note, .drawer-kicker,
+.rules-foot, .cmp-title, .map-legend { color: var(--ink-2); }
+
+/* badge tiếng Việt dùng sans, không dùng mono */
+.step-stage, .v-level, .badge-warn, .badge-block, .badge-ok, .badge-late, .badge-none,
+.pill, .chip, .pill-now, .pill-delta, .inc-label, .intro-sm span, .kpi-value small {
+  font-family: var(--sans);
+}
+
+/* dải KPI: chân chữ thẳng, đơn vị rõ hơn */
+.kpi-strip .kpi { gap: 2px; }
+.kpi-strip .kpi-value { display: inline-flex; align-items: baseline; gap: 4px; }
+.kpi-strip .kpi-value small { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+
+/* nhãn bản đồ to và đậm hơn */
+.hub-label { font-size: 11px; fill: #3f3f46; stroke: #faf8f3; stroke-width: 2.5px; }
+.district-label { font-size: 9.5px; fill: #57534e; stroke: #faf8f3; stroke-width: 2.5px; }
+.gantt .g-label { fill: var(--ink-2); font-size: 11px; }
+
+/* bảng đơn thoáng hơn */
+.orders-table { font-size: 13px; }
+.orders-table td { padding: 10px 7px; }
+.orders-table th { padding: 8px 7px; font-size: 11px; }
+
+/* rail: chữ NHÓM 14 không bị cắt, avatar bo mềm */
+.rail { padding-bottom: 18px; }
+.rail-foot { color: #a8a29b; letter-spacing: .2em; }
+.rail-foot { margin-bottom: 6px; }
+.mark { border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+
+/* luật mức chặn còn tồn đọng: đỏ, không phải vàng */
+.rules .num.bad { color: var(--alert); font-weight: 700; }
+
+/* v8.1: ép độ tương phản cho các nhãn phụ có selector đặc thù hơn */
+.kpi-strip .kpi-label,
+.kpi-strip .kpi-value small,
+.kpi-strip .kpi-note,
+.route-foot span,
+.route-sub,
+.orders-table th,
+.map-legend,
+.hint,
+.step-ms,
+.v-id,
+.district-label { color: var(--ink-2); }
+
+:root { --ink-3: #6b6560; }
+.kpi-strip #kpi-ontime { gap: 0; }
+.rail { padding-bottom: 28px; }
+.rail-foot { color: #b3ada6; }

@@ -65,16 +65,16 @@ function fitView() {
   const rect = $(".map-wrap").getBoundingClientRect();
   const aspect = Math.max(rect.width, 1) / Math.max(rect.height, 1);
   const points = state.hubs.map((hub) => project(hub.lat, hub.lon));
-  const minX = Math.min(...points.map((p) => p[0])) - 55;
-  const maxX = Math.max(...points.map((p) => p[0])) + 55;
-  const minY = Math.min(...points.map((p) => p[1])) - 45;
-  const maxY = Math.max(...points.map((p) => p[1])) + 45;
+  const minX = Math.min(...points.map((p) => p[0])) - 62;
+  const maxX = Math.max(...points.map((p) => p[0])) + 62;
+  const minY = Math.min(...points.map((p) => p[1])) - 74;
+  const maxY = Math.max(...points.map((p) => p[1])) + 74;
   let w = maxX - minX;
   let h = maxY - minY;
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
-  const zoom = 1.22;
+  const zoom = 1.12;
   w /= zoom;
   h /= zoom;
   state.view = { x: cx - w / 2, y: cy - h / 2, w, h };
@@ -588,7 +588,7 @@ function renderRoutes(routes) {
       <div class="route-foot">
         <span><b>${fmt1(route.load_kg)}/${fmtKm(vehicle.capacity_kg)}</b> kg</span>
         <span>xong <b>${clockLabel(lastArrival(route))}</b></span>
-        ${route.late_count ? `<span class="tag-late">${route.late_count} trễ</span>` : ""}
+        ${route.late_count ? `<span class="badge-late">${route.late_count} trễ</span>` : ""}
         ${blocked ? `<span class="badge-block">${blocked} chặn</span>` : ""}
         ${warnings ? `<span class="badge-warn">${warnings} cảnh báo</span>` : ""}
       </div>`;
@@ -1229,6 +1229,7 @@ async function openRules() {
   ];
 
   const rules = [...data.rules].sort((a, b) => a.priority - b.priority);
+  const incidentMode = Boolean(state.incident);
   const html = sections
     .map(([level, title]) => {
       const group = rules.filter((rule) => rule.level === level);
@@ -1238,10 +1239,11 @@ async function openRules() {
         .map((rule) => {
           const before = countOf(initial, rule.id);
           const after = countOf(left, rule.id);
-          const num = state.plan ? `${before} → ${after}` : "—";
+          const num = !state.plan ? "—" : incidentMode ? `${after}` : `${before} → ${after}`;
           const cls = !state.plan ? ""
             : before === 0 && after === 0 ? "zero"
             : after === 0 ? "done"
+            : level === "chan" ? "bad"
             : "same";
           return `<tr>
             <td>${rule.id}</td>
@@ -1250,8 +1252,9 @@ async function openRules() {
           </tr>`;
         })
         .join("");
+      const head = incidentMode ? "Sau sự cố" : "Đầu → còn";
       return `<p class="cmp-title" style="margin-top:16px">${title}</p>
-        <table class="rules"><thead><tr><th></th><th>Luật</th><th style="text-align:right">Đầu → còn</th></tr></thead>
+        <table class="rules"><thead><tr><th></th><th>Luật</th><th style="text-align:right">${head}</th></tr></thead>
         <tbody>${rows}</tbody></table>`;
     })
     .join("");
@@ -1488,6 +1491,7 @@ async function loadEtaInfo() {
     else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
 
 
 
