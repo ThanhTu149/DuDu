@@ -47,20 +47,25 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
 | `GET /api/hubs` | 16 nút + khung bao để vẽ bản đồ |
 | `GET /api/scenario?seed&orders` | kịch bản tái lập được |
 | `POST /api/plan` | chạy tác tử: tuyến, số liệu, vi phạm, nhật ký |
-| `POST /api/incident` | sự cố xe hỏng → chia lại |
+| `POST /api/incident` | sự cố xe hỏng / kẹt xe (A* đi vòng) / kho đóng → chia lại |
 | `GET /api/compare` | bảng so sánh chiến lược cho báo cáo |
 | `GET /api/rules` | danh sách luật để hiển thị |
 | `GET /api/geometry?a&b` | đường đi thật giữa 2 nút (có cache) |
 
 ## Ghi chú kỹ thuật
 
-- **Vì sao A\* vẫn có mặt dù ma trận đầy đủ?** Đường đi tối ưu trên đồ thị đầy đủ thường là
-  đường trực tiếp, nhưng A* là công cụ đúng khi một nút bị chặn (ngập, cấm tải) — lúc đó
-  phải tìm đường vòng. Heuristic dùng đường chim bay chia tốc độ tối đa 70 km/h nên không
-  vượt chi phí thật (điều kiện admissible).
+- **A\* dùng ở đâu trong hệ thống thật?** Khi mô phỏng "kẹt xe diện rộng", các nút nằm trong
+  bán kính 4,5 km quanh tâm thành phố bị chặn **đi thẳng** với nhau (`congestion_edges`).
+  Tác tử bọc mạng lưới bằng `RoutingView`: chặng nào bị chặn thì gọi A* tìm đường vòng qua
+  nút khác, rồi cộng km/phút của đường vòng vào kế hoạch. Nhật ký ghi rõ "A* tìm đường vòng
+  tránh vùng ùn tắc: N chặng, +X km" để giảng viên thấy thuật toán thật sự chạy, không phải
+  khai báo cho có. Heuristic dùng đường chim bay chia tốc độ tối đa 70 km/h nên không vượt
+  chi phí thật (điều kiện admissible); kiểm thử `tests/test_network.py` khẳng định đường
+  vòng không đi qua chặng bị cấm và luôn đắt hơn đường trực tiếp.
 - **Vì sao 2-opt có hai hàm mục tiêu?** Một tuyến ngắn nhất chưa chắc giao đúng hẹn. Báo cáo
   so sánh hai biến thể để thấy rõ đánh đổi km ↔ tỷ lệ đúng giờ.
 - **Vì sao có bước sửa tải sau Hungary?** Hungary tối thiểu chi phí, không biết ràng buộc
   sức chứa theo từng xe; bước sửa chuyển đơn nhỏ nhất sang xe còn chỗ.
 - **Vì sao đơn được làm tròn về nút mạng?** 16 nút đại diện cho 16 khu vực; toạ độ thật của
   đơn lệch trong bán kính ~1 km để bản đồ không chồng điểm, còn định tuyến dùng nút.
+

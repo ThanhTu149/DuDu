@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass, field
 
 from .assignment import STRATEGIES, _load, repair_capacity
-from .network import Network
+from .network import Network, RoutingView, congestion_edges, hubs_within
 from .routing import BASE_MINUTE, plan_routes, summarize
 from .rules import RuleEngine
 
@@ -63,6 +63,13 @@ class DispatcherAgent:
         self.steps: list[Step] = []
         self._t0: float | None = None
         self._incident_kind: str | None = None
+        self.view: RoutingView | None = None
+
+    # -- mạng đang dùng --------------------------------------------------
+    @property
+    def active_net(self) -> Network | RoutingView:
+        """Trong sự cố kẹt xe, trả về view có A* tìm đường vòng; bình thường là mạng gốc."""
+        return self.view or self.net
 
     # -- tiện ích -------------------------------------------------------
     def _log(self, stage: str, title: str, detail: str) -> None:
@@ -76,10 +83,10 @@ class DispatcherAgent:
         return {v["id"]: v for v in self.vehicles}
 
     def _plan(self, assignment: dict[str, list[dict]]):
-        routes = plan_routes(self.net, self.vehicles, assignment, strategy=self.routing_strategy, start_min=BASE_MINUTE, eta_model=self.eta_model, time_multiplier=self.time_multiplier)
+        routes = plan_routes(self.active_net, self.vehicles, assignment, strategy=self.routing_strategy, start_min=BASE_MINUTE, eta_model=self.eta_model, time_multiplier=self.time_multiplier)
         assignment, moves = repair_capacity(assignment, self.vehicles)
         if moves:
-            routes = plan_routes(self.net, self.vehicles, assignment, strategy=self.routing_strategy, start_min=BASE_MINUTE, eta_model=self.eta_model, time_multiplier=self.time_multiplier)
+            routes = plan_routes(self.active_net, self.vehicles, assignment, strategy=self.routing_strategy, start_min=BASE_MINUTE, eta_model=self.eta_model, time_multiplier=self.time_multiplier)
         return assignment, routes, moves
 
     # -- chu trình chính -------------------------------------------------
@@ -91,7 +98,7 @@ class DispatcherAgent:
                   f"Tổng khối lượng {sum(o['weight_kg'] for o in self.orders):.0f} kg.")
 
         assign_fn = STRATEGIES[self.assignment_strategy]
-        assignment = assign_fn(self.net, self.orders, self.vehicles)
+        assignment = assign_fn(self.active_net, self.orders, self.vehicles)
         self._log("decide", f"Chia đơn bằng {ASSIGNMENT_LABEL.get(self.assignment_strategy, self.assignment_strategy)}",
                   f"{sum(1 for v in assignment.values() if v)} xe có đơn, "
                   f"tải lớn nhất {max((_load(v)[0] for v in assignment.values()), default=0):.0f} kg.")
@@ -100,7 +107,7 @@ class DispatcherAgent:
         if moves:
             self._log("act", "Sửa lô vượt tải", f"chuyển {moves} đơn sang xe còn chỗ.")
 
-        violations = self.rules.check_routes(self.net, routes, self._vehicles_by_id(), self._orders_by_id())
+        violations = self.rules.check_routes(self.active_net, routes, self._vehicles_by_id(), self._orders_by_id())
         initial_violations = list(violations)
         self._log("verify", "Đối chiếu cơ sở luật",
                   f"{len(violations)} vi phạm" if violations else "không có vi phạm.")
@@ -116,7 +123,7 @@ class DispatcherAgent:
                 break
             self._log("act", f"Vòng {round_index}: đổi xe cho đơn vi phạm", f"đã chuyển {moved} đơn.")
             assignment, routes, _ = self._plan(assignment)
-            violations = self.rules.check_routes(self.net, routes, self._vehicles_by_id(), self._orders_by_id())
+            violations = self.rules.check_routes(self.active_net, routes, self._vehicles_by_id(), self._orders_by_id())
             self._log("verify", f"Vòng {round_index}: kiểm tra lại",
                       f"còn {len(violations)} vi phạm." if violations else "đã sạch vi phạm.")
 
@@ -192,14 +199,19 @@ class DispatcherAgent:
         năng lực còn lại, lập lại tuyến và kiểm tra luật.
         """
         self._incident_kind = kind
+        self.view = None
         if kind == "truck_ban":
             self._log("perceive", "Sự cố: xe tải bị chặn", f"xe {vehicle_id} không được vào nội thành.")
             return self._replan_after_removal()
 
         if kind == "congestion":
             self.time_multiplier = 1.4
+            blocked_edges = congestion_edges(self.net, radius_km=4.5)
+            inside = hubs_within(self.net, radius_km=4.5)
+            self.view = RoutingView(self.net, blocked_edges)
             self._log("perceive", "Sự cố: kẹt xe diện rộng",
-                      "toàn bộ thời gian di chuyển tăng 40%; tác tử sẽ tính lại tuyến nên quãng đường có thể thay đổi.")
+                      f"toàn bộ thời gian di chuyển tăng 40%; {len(inside)} nút trong vùng ùn tắc "
+                      f"({', '.join(inside)}) bị chặn đi thẳng — A* sẽ tìm đường vòng.")
             return self._replan_after_removal()
 
         if kind == "depot_closed" and hub_id:
@@ -233,13 +245,22 @@ class DispatcherAgent:
         """Chia lại đơn theo năng lực còn lại rồi lập lại toàn bộ tuyến."""
         self._t0 = time.perf_counter()
         assign_fn = STRATEGIES[self.assignment_strategy]
-        assignment = assign_fn(self.net, self.orders, self.vehicles)
+        assignment = assign_fn(self.active_net, self.orders, self.vehicles)
         assignment, routes, moves = self._plan(assignment)
         detail = (f"{len(self.vehicles)} xe còn lại nhận {len(self.orders)} đơn."
                   if self._incident_kind == "breakdown"
                   else f"Phân bổ lại {len(self.orders)} đơn cho {len(self.vehicles)} xe.")
         self._log("act", "Chia lại toàn bộ đơn", detail)
-        violations = self.rules.check_routes(self.net, routes, self._vehicles_by_id(), self._orders_by_id())
+        if self.view and self.view.detours:
+            summary = self.view.summary()
+            examples = "; ".join(
+                f"{item['from']}→{item['to']} qua {'→'.join(item['path'][1:-1]) or 'đường vành đai'}"
+                for item in summary["paths"][:2]
+            )
+            self._log("act", "A* tìm đường vòng tránh vùng ùn tắc",
+                      f"{summary['detour_legs']} chặng phải đi vòng, cộng thêm "
+                      f"{summary['extra_km']:.1f} km ({examples}).")
+        violations = self.rules.check_routes(self.active_net, routes, self._vehicles_by_id(), self._orders_by_id())
         metrics = summarize(routes)
         metrics["violations"] = len(violations)
         metrics["blocked"] = sum(1 for v in violations if v["level"] == "chan")
@@ -252,6 +273,8 @@ class DispatcherAgent:
             "steps": [s.as_dict() for s in self.steps],
             "strategy": {"assignment": self.assignment_strategy, "routing": self.routing_strategy, "eta": "ml" if self.eta_model else "osrm"},
         }
+
+
 
 
 

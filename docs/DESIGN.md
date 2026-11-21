@@ -222,7 +222,7 @@ nếu không thì cú click bị chuyển sang thẻ `<svg>` và thẻ nổi kh�
 | Cột `đầu → còn` một màu | Thêm 3 mức màu: `0 → 0` xám nhạt, `x → 0` xanh lá (tác tử dọn sạch), `x → x` vàng cam; mã luật sắp tăng dần trong mỗi nhóm (R01, R02, R03, R08, R12) |
 | Thuật ngữ lẫn `hungarian` / `Hungary` | Thống nhất "Hungarian" ở cả nhật ký và bảng so sánh; bảng so sánh thêm pill **Đang dùng** và tô đỏ ô số xấu (trễ, quá tải) |
 | Scrollbar dày, footer lặp số liệu | Scrollbar mảnh 6px; bỏ hẳn cụm `48 điểm giao · 446,5 phút` ở chân bản đồ (đã có ở dải KPI) |
-| **Lỗi** lệch delta (160→176 nhưng +15) | Tính chênh lệch trên số **đã làm tròn** hiển thị: 176 − 160 = 16 |
+| **Lỗi** lệch delta (hiển thị làm tròn từng số nên cộng trừ lệch 1 đơn vị) | Luôn tính chênh lệch trên **số đã làm tròn** đúng như hiển thị (`Math.round(after) − Math.round(before)`), không lấy hiệu hai số thực rồi làm tròn riêng |
 | **Lỗi** số phút ở đáy bản đồ không cập nhật | Xoá cụm đó; số phút chỉ còn ở `kpi-note` và luôn lấy từ metrics mới |
 | **Lỗi** danh sách tuyến bị ép khi bật sự cố | Dải so sánh rời khỏi cột phải, thành **băng ngang full-width** dưới dải KPI, cột tài xế giữ nguyên chiều cao |
 | **Lỗi** icon rail kẹt sau khi đóng modal | `closeModal()` trả trạng thái active về mục Điều phối (Esc, nút ×, bấm nền đều đi qua hàm này) |
@@ -329,3 +329,4 @@ Banner trước đây chỉ sống trong modal chào mừng; giờ nó thành m�
 | Banner trong modal lộ hai dải trắng hai bên | Modal hẹp còn **740px**, ảnh `width: 100%`, bỏ `object-fit: contain`, bo góc trên; nút × tròn mờ tối nổi trên ảnh |
 | Tooltip mặc định của trình duyệt ở bảng luật | Bỏ `title`, thay bằng mũi tên `↗` màu cam hiện dần khi hover, ngăn bằng `aria-label` |
 | Chữ dọc “NHÓM 14” | Đổi thành **“DuDu”** |
+

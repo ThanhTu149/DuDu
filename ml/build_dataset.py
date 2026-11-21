@@ -67,6 +67,7 @@ def from_nightly_taxi() -> pd.DataFrame:
         "duration_min": duration,
         "hour": pickup.dt.hour,
         "weekday": pickup.dt.dayofweek,
+        "day": pickup.dt.day,
         "passenger": raw["passenger_count"].fillna(0).astype(int),
         "pu_zone": raw["PULocationID"].astype(int),
     })
@@ -170,3 +171,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
