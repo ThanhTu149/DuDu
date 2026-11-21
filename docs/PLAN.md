@@ -38,17 +38,20 @@ Chi tiết từng đầu việc nhỏ: xem `docs/TASKS.md`.
 
 ---
 
-## 3. Phân công (4 người)
+## 3. Nhóm thực hiện
 
-| Thành viên | Mảng chính | Mảng phụ |
+Nhóm 14 gồm 01 thành viên: Lê Thanh Tú — 049206004778. Toàn bộ các mảng dưới đây do một
+người thực hiện, chia theo thứ tự làm để dễ theo dõi tiến độ:
+
+| Thứ tự | Mảng | Sản phẩm |
 |---|---|---|
-| A | Tìm kiếm + VRP, harness so sánh | Viết chương 2 |
-| B | Máy học ETA, dataset, đánh giá | Viết chương 4 |
-| C | Logic + rule engine, tác tử | Viết chương 1, 3 |
-| D | Giao diện, API, tích hợp, demo | Hình thức báo cáo, thuyết trình |
+| 1 | Mạng lưới, dữ liệu OSRM | `data/`, `backend/dispatch/network.py` |
+| 2 | Chia đơn và xếp tuyến | `backend/dispatch/{assignment,routing}.py` |
+| 3 | Cơ sở luật và tác tử | `backend/dispatch/{rules,agent}.py` |
+| 4 | Mô hình ETA | `ml/` |
+| 5 | Giao diện và API | `web/`, `backend/app.py` |
 
-Mỗi người làm trên nhánh riêng `feat/<mảng>`, mở pull request vào `main`, người khác review
-một lượt. Lịch sử commit là bằng chứng cho phần làm việc nhóm.
+Commit chia theo từng mảng để lịch sử đọc được như nhật ký làm việc.
 
 ---
 
@@ -71,3 +74,4 @@ một lượt. Lịch sử commit là bằng chứng cho phần làm việc nhó
 | Tuần cuối mới ghép module | Cao | API chốt từ P0, mỗi module có endpoint riêng từ đầu |
 | Demo lỗi mạng khi bảo vệ | Cao | Ma trận đã cache trong repo; tuyến vẽ được bằng cache |
 | Ôm quá nhiều kỹ thuật | Trung bình | Mỗi kỹ thuật có bản tối thiểu; nâng cấp sau khi đủ |
+

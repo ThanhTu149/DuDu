@@ -56,8 +56,10 @@ python -m uvicorn backend.app:app --reload --port 8000
 
 ## Ghi chú
 
-Repo dùng commit theo từng bước công việc nhỏ, mỗi thành viên một nhánh tính năng.
-Xem `docs/PLAN.md` để biết tiến độ và phân công.
+Repo dùng commit theo từng bước công việc nhỏ, chia theo mảng để lịch sử đọc được như nhật
+ký làm việc. Xem `docs/PLAN.md` để biết tiến độ.
+
+Sinh viên thực hiện: Lê Thanh Tú — 049206004778 — Nhóm 14.
 
 ## Tài liệu
 
@@ -73,3 +75,4 @@ Xem `docs/PLAN.md` để biết tiến độ và phân công.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+

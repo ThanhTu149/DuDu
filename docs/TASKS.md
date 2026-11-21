@@ -47,14 +47,9 @@ Theo dõi tiến độ các việc kỹ thuật. Quy ước chung:
 
 ---
 
-## Chia việc theo người
+## Thứ tự thực hiện
 
-| Việc | Người | Nhánh |
-|---|---|---|
-| P1 ETA | B | `feat/eta-ml` |
-| P2 VRP | A | `feat/vrp-savings` |
-| P3 luật | C | `feat/rules-12` |
-| P4 giao diện | D | `feat/ui-incident` |
-| P5 hoàn thiện | cả nhóm | `docs/report` |
+Nhóm 14 có một thành viên, nên các việc chạy tuần tự: P0 (dữ liệu) → P2 (tuyến) → P1 (ETA) →
+P3 (luật) → P4 (giao diện) → P5 (hoàn thiện). Mỗi việc một nhánh `feat/<mã-việc>` để lịch sử
+commit đọc được như nhật ký.
 
-Review chéo: người làm P1 review P2, P2 review P3, P3 review P4, P4 review P1.
