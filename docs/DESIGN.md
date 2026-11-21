@@ -88,3 +88,35 @@ Dùng file Figma (Pro Education) để làm **bộ thư viện** trình bày tro
 
 Việc dựng Figma **không chặn** tiến độ code: giao diện chạy được trước, Figma là bản
 trình bày lại. Đừng dành quá 1 buổi cho phần này.
+
+## 8. Bản v2 — sửa sau khi tự phản biện
+
+Đợt rà soát thứ hai (đứng ở góc giảng viên) tìm ra các lỗ hổng dưới đây và đã sửa:
+
+| Lỗ hổng | Cách sửa |
+|---|---|
+| Bấm vào điểm giao không có gì xảy ra | **Drawer chi tiết đơn**: mã đơn, cửa hàng, địa chỉ, hàng hoá, thu hộ, hạn giao, giờ tới, tài xế, thứ tự điểm, và các luật đã kích hoạt trên đơn đó |
+| Không thấy chiều thời gian | **Drawer tuyến**: lịch giao theo giờ, mỗi điểm một dòng, đánh dấu trễ bằng số phút, đúng hạn bằng ✓ |
+| Bản đồ thiếu bối cảnh | Thêm vùng đô thị (bao lồi), nhãn quận, mũi tên hướng tuyến, thước tỉ lệ km |
+| Số liệu sai định dạng Việt | Đổi toàn bộ sang `toLocaleString('vi-VN')`: `446,5 phút`, `97,9%`, `1.000đ` |
+| Không phản hồi khi bấm | Nút có trạng thái đang tính (spinner), **toast** báo xong/lỗi, nút CSV bật khi có kế hoạch |
+| Không xuất được kế hoạch | Nút **CSV** xuất phiếu giao: tài xế, biển số, thứ tự, mã đơn, địa chỉ, giờ tới, trạng thái |
+| Không tìm được đơn | Ô tìm kiếm theo mã đơn / cửa hàng / địa chỉ / quận, tô sáng điểm khớp và hiện `n/48` |
+| Chỉ đẹp ở 1600px | Breakpoint 1460 / 1240 / 900: topbar gọn lại, bảng KPI 4 cột, bố cục xếp dọc và cuộn được |
+| Rail toàn nút trang trí | Ba nút giờ đều có việc: điều phối (đóng drawer), cơ sở tri thức, so sánh chiến lược; có `aria-label` |
+
+Bổ sung về khả năng truy cập: `:focus-visible` cho mọi phần tử tương tác, thẻ tuyến có
+`role="button"` + `tabindex` + Enter/Space, `aria-live` cho toast, tôn trọng
+`prefers-reduced-motion` (tắt spinner quay).
+
+Bảng breakpoint:
+
+| Bề rộng | Bố cục |
+|---|---|
+| > 1460 | đầy đủ: thương hiệu, ca trực, seed/đơn/ETA |
+| 1240–1460 | ẩn phụ đề và giờ ca, giữ `48 đơn · 8 xe · seed 7` |
+| 900–1240 | một cột: bản đồ trên, KPI + tuyến dưới, nhật ký cuối trang, cuộn dọc |
+| < 900 | ẩn rail, topbar xuống dòng |
+
+Ảnh cập nhật: `docs/hinh/giao-dien-dieu-phoi.png`, `giao-dien-tuyen.png`, `giao-dien-don.png`,
+`giao-dien-luat.png`, `giao-dien-so-sanh.png`, `giao-dien-su-co.png`.

@@ -11,19 +11,19 @@
 <div class="app">
 
   <aside class="rail">
-    <div class="mark" title="DuDu">D</div>
-    <nav class="rail-nav">
-      <button class="rail-btn is-active" data-view="dispatch" title="Điều phối">
-        <svg viewBox="0 0 24 24"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
+    <div class="mark" aria-hidden="true">D</div>
+    <nav class="rail-nav" aria-label="Khu vực chính">
+      <button class="rail-btn is-active" data-view="dispatch" aria-label="Bảng điều phối" title="Bảng điều phối">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
       </button>
-      <button class="rail-btn" data-view="routes" title="Tuyến">
-        <svg viewBox="0 0 24 24"><path d="M6 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm12 12a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM7.4 7.4l8.2 8.2-1.4 1.4-8.2-8.2 1.4-1.4Z"/></svg>
+      <button class="rail-btn" data-view="rules" aria-label="Cơ sở tri thức" title="Cơ sở tri thức">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
       </button>
-      <button class="rail-btn" data-view="rules" title="Cơ sở luật">
-        <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
+      <button class="rail-btn" data-view="compare" aria-label="So sánh chiến lược" title="So sánh chiến lược">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4V10H4v10Zm6 0h4V4h-4v16Zm6 0h4v-7h-4v7Z"/></svg>
       </button>
     </nav>
-    <div class="rail-foot">BTL AI · UTH</div>
+    <div class="rail-foot">Nhóm 14</div>
   </aside>
 
   <div class="shell">
@@ -35,21 +35,21 @@
       </div>
 
       <div class="shift">
-        <span class="dot"></span>
-        <span>Ca sáng</span>
-        <span class="mono">08:00 – 12:00</span>
-        <span class="sep"></span>
+        <span class="dot" aria-hidden="true"></span>
+        <span class="shift-label">Ca sáng</span>
+        <span class="mono shift-hours">08:00 – 12:00</span>
+        <span class="sep" aria-hidden="true"></span>
         <span id="scenario-meta" class="mono">—</span>
       </div>
 
       <div class="controls">
         <label class="field">
           <span>Seed</span>
-          <input id="seed" type="number" value="7" min="1" max="999" />
+          <input id="seed" type="number" value="7" min="1" max="999" aria-label="Hạt giống kịch bản" />
         </label>
         <label class="field">
           <span>Đơn</span>
-          <select id="orders">
+          <select id="orders" aria-label="Số đơn trong ca">
             <option value="48">48</option>
             <option value="96">96</option>
             <option value="144">144</option>
@@ -60,8 +60,8 @@
           <span id="eta-label">ETA mô hình</span>
         </label>
         <button id="plan-btn" class="btn btn-primary">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          Lập kế hoạch
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          <span class="btn-text">Lập kế hoạch</span>
         </button>
       </div>
     </header>
@@ -72,11 +72,20 @@
         <div class="panel-head">
           <h2>Bản đồ điều phối</h2>
           <div class="map-tools">
-            <span id="map-hint" class="hint">Bấm “Lập kế hoạch” để chạy tác tử</span>
+            <label class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm5.3 9.7 4 4-1.4 1.4-4-4 1.4-1.4Z"/></svg>
+              <input id="search" type="search" placeholder="Tìm mã đơn, cửa hàng, quận…" aria-label="Tìm đơn hàng" />
+            </label>
+            <span id="search-count" class="chip" hidden></span>
+            <button id="export-btn" class="btn btn-quiet" disabled title="Tải kế hoạch dạng CSV">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v9l3.5-3.5 1.4 1.4L12 17.8 6.1 10.9 7.5 9.5 11 13V4ZM5 19h14v2H5v-2Z"/></svg>
+              CSV
+            </button>
           </div>
         </div>
         <div class="map-wrap">
-          <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
+          <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet" role="img"
+               aria-label="Bản đồ 16 nút giao hàng tại TP.HCM và các tuyến xe"></svg>
           <div id="map-tip" class="map-tip" hidden></div>
         </div>
         <div class="map-legend">
@@ -84,6 +93,7 @@
           <span><i class="swatch sw-hub"></i>Bưu cục</span>
           <span><i class="swatch sw-stop"></i>Điểm giao</span>
           <span><i class="swatch sw-late"></i>Trễ hẹn</span>
+          <span class="hint" id="map-hint">Bấm “Lập kế hoạch” để chạy tác tử</span>
         </div>
       </section>
 
@@ -100,8 +110,8 @@
           <span id="route-count" class="pill">0 tuyến</span>
         </div>
 
-        <div id="routes" class="route-list">
-          <p class="empty">Chưa có kế hoạch.</p>
+        <div id="routes" class="route-list" role="list">
+          <p class="empty">Chưa có kế hoạch. Bấm <b>Lập kế hoạch</b> ở góc trên.</p>
         </div>
 
         <div class="side-actions">
@@ -129,9 +139,22 @@
   </div>
 </div>
 
+<aside id="drawer" class="drawer" hidden aria-label="Chi tiết">
+  <header class="drawer-head">
+    <div>
+      <p class="drawer-kicker" id="drawer-kicker">Chi tiết đơn</p>
+      <h3 id="drawer-title">—</h3>
+    </div>
+    <button id="drawer-close" class="btn-close" aria-label="Đóng">×</button>
+  </header>
+  <div id="drawer-body" class="drawer-body"></div>
+</aside>
+
+<div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
 <div id="modal" class="modal" hidden>
-  <div class="modal-card">
-    <header><h3 id="modal-title">So sánh chiến lược</h3><button id="modal-close" class="btn-close">×</button></header>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h3 id="modal-title">So sánh chiến lược</h3><button id="modal-close" class="btn-close" aria-label="Đóng">×</button></header>
     <div id="modal-body"></div>
   </div>
 </div>
@@ -139,3 +162,4 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+

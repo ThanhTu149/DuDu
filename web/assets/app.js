@@ -1,11 +1,12 @@
-/* DuDu — giao diện điều phối. Không framework, không thư viện: SVG tự vẽ + fetch API. */
+/* DuDu — giao diện điều phối.
+   Không framework, không thư viện: SVG tự vẽ + fetch API. */
 
 const $ = (sel) => document.querySelector(sel);
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const W = 1000;
 const H = 640;
-const PAD = 52;
+const PAD = 56;
 
 const ROUTE_COLORS = ["#c9490e", "#2c6b52", "#2f5d8c", "#8a6100", "#6b3f8c", "#a3402d", "#2f7c7c", "#5c6b2f"];
 
@@ -15,14 +16,26 @@ const state = {
   scenario: null,
   plan: null,
   vehiclesById: {},
+  ordersById: {},
   activeVehicle: null,
   geometry: new Map(),
+  geometryDone: false,
   projecting: null,
+  search: "",
 };
 
-/* ---------- helpers ---------- */
-const fmtKm = (v) => `${v.toFixed(0)}`;
-const fmt1 = (v) => v.toFixed(1);
+/* ---------------------------------------------------------------- helpers */
+const viNum = (value, digits = 0) =>
+  Number(value).toLocaleString("vi-VN", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+const fmtKm = (value) => viNum(value, 0);
+const fmt1 = (value) => viNum(value, 1);
+
+function clockLabel(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = Math.round(minutes % 60);
+  return `${String(h).padStart(2, "0")}:${String(m === 60 ? 0 : m).padStart(2, "0")}`;
+}
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -44,10 +57,27 @@ async function api(path, options) {
   return response.json();
 }
 
-/* ---------- map ---------- */
-function drawGrid() {
+let toastTimer = null;
+function toast(message, kind = "ok") {
+  const box = $("#toast");
+  box.textContent = message;
+  box.classList.toggle("is-error", kind === "error");
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.hidden = true; }, 3800);
+}
+
+/* ---------------------------------------------------------------- bản đồ */
+function drawBase() {
   const svg = $("#map");
   svg.innerHTML = "";
+
+  const defs = el("defs");
+  const marker = el("marker", { id: "arrow", viewBox: "0 0 10 10", refX: "5", refY: "5", markerWidth: "5", markerHeight: "5", orient: "auto-start-reverse" });
+  marker.appendChild(el("path", { d: "M0,0 L10,5 L0,10 z", class: "arrow" }));
+  defs.appendChild(marker);
+  svg.appendChild(defs);
+
   for (let i = 1; i < 8; i += 1) {
     const y = PAD + ((H - 2 * PAD) / 8) * i;
     svg.appendChild(el("line", { x1: PAD, x2: W - PAD, y1: y, y2: y, class: "grid-line" }));
@@ -55,6 +85,56 @@ function drawGrid() {
   for (let i = 1; i < 10; i += 1) {
     const x = PAD + ((W - 2 * PAD) / 10) * i;
     svg.appendChild(el("line", { x1: x, x2: x, y1: PAD, y2: H - PAD, class: "grid-line" }));
+  }
+
+  // vùng đô thị (bao lồi của các nút) để bản đồ có bối cảnh
+  const points = state.hubs.map((hub) => project(hub.lat, hub.lon)).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const point of points) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop();
+    lower.push(point);
+  }
+  const upper = [];
+  for (const point of [...points].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop();
+    upper.push(point);
+  }
+  const hull = lower.concat(upper.slice(1, -1));
+  const hullPath = hull.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(1)},${point[1].toFixed(1)}`).join("") + "Z";
+  svg.appendChild(el("path", { d: hullPath, class: "city-hull" }));
+
+  // nhãn quận: trung bình vị trí các nút cùng quận
+  const byDistrict = {};
+  for (const hub of state.hubs) {
+    const point = project(hub.lat, hub.lon);
+    byDistrict[hub.district] = byDistrict[hub.district] || { x: 0, y: 0, n: 0 };
+    byDistrict[hub.district].x += point[0];
+    byDistrict[hub.district].y += point[1];
+    byDistrict[hub.district].n += 1;
+  }
+  // đẩy nhãn quận ra phía ngoài và tránh đè lên nhãn nút
+  const centre = project((state.bounds.min_lat + state.bounds.max_lat) / 2, (state.bounds.min_lon + state.bounds.max_lon) / 2);
+  for (const [district, box] of Object.entries(byDistrict)) {
+    let x = box.x / box.n;
+    let y = box.y / box.n;
+    const dx = x - centre[0];
+    const dy = y - centre[1];
+    const len = Math.hypot(dx, dy) || 1;
+    let placed = null;
+    for (const push of [58, 96, 132]) {
+      const cx = x + (dx / len) * push;
+      const cy = y + (dy / len) * push;
+      const clash = state.hubs.some((hub) => {
+        const [hx, hy] = project(hub.lat, hub.lon);
+        return Math.hypot(hx - cx, hy - cy - 2) < 78;
+      });
+      if (!clash) { placed = [cx, cy]; break; }
+    }
+    if (!placed) continue;
+    const label = el("text", { x: placed[0], y: placed[1], class: "district-label" });
+    label.textContent = district;
+    svg.appendChild(label);
   }
 }
 
@@ -65,14 +145,9 @@ function drawHubs() {
     const [x, y] = project(hub.lat, hub.lon);
     const isDepot = hub.kind === "depot" || hub.kind === "port" || hub.kind === "market";
     if (isDepot) {
-      layer.appendChild(el("rect", {
-        x: x - 4, y: y - 4, width: 8, height: 8, rx: 1.5,
-        fill: "#15171c", opacity: 0.85,
-      }));
+      layer.appendChild(el("rect", { x: x - 4, y: y - 4, width: 8, height: 8, rx: 1.5, fill: "#15171c", opacity: 0.85 }));
     } else {
-      layer.appendChild(el("circle", {
-        cx: x, cy: y, r: 4.5, fill: "#fff", stroke: "#858b94", "stroke-width": 1.4,
-      }));
+      layer.appendChild(el("circle", { cx: x, cy: y, r: 4.5, fill: "#fff", stroke: "#858b94", "stroke-width": 1.4 }));
     }
     const label = el("text", { x: x + 8, y: y + 3.5, class: "hub-label" });
     label.textContent = hub.name;
@@ -81,11 +156,28 @@ function drawHubs() {
   svg.appendChild(layer);
 }
 
-/* ---------- geometry (đường đi thật, tải dần) ---------- */
-function straightPath(a, b) {
-  const [x1, y1] = project(...a);
-  const [x2, y2] = project(...b);
-  return `M${x1.toFixed(1)},${y1.toFixed(1)}L${x2.toFixed(1)},${y2.toFixed(1)}`;
+function drawScale() {
+  const b = state.bounds;
+  const meanLat = (b.min_lat + b.max_lat) / 2;
+  const kmPerDegLon = 111.32 * Math.cos((meanLat * Math.PI) / 180);
+  const kmPerPx = (kmPerDegLon * (b.max_lon - b.min_lon)) / (W - 2 * PAD);
+  const target = [2, 5, 10, 20].find((km) => km / kmPerPx > 70) || 20;
+  const width = target / kmPerPx;
+  const group = el("g", { class: "scale-bar", transform: `translate(${PAD}, ${H - 22})` });
+  group.appendChild(el("line", { x1: 0, y1: 0, x2: width, y2: 0 }));
+  group.appendChild(el("line", { x1: 0, y1: -4, x2: 0, y2: 4 }));
+  group.appendChild(el("line", { x1: width, y1: -4, x2: width, y2: 4 }));
+  const label = el("text", { x: width / 2, y: -8, "text-anchor": "middle" });
+  label.textContent = `${target} km`;
+  group.appendChild(label);
+  $("#map").appendChild(group);
+}
+
+/* ------------------------------------------------------- hình học tuyến */
+function straightPoints(a, b) {
+  const [x1, y1] = project(a.lat, a.lon);
+  const [x2, y2] = project(b.lat, b.lon);
+  return [[x1, y1], [x2, y2]];
 }
 
 async function geometryFor(a, b) {
@@ -93,56 +185,76 @@ async function geometryFor(a, b) {
   if (state.geometry.has(key)) return state.geometry.get(key);
   const promise = api(`/api/geometry?a=${a}&b=${b}`)
     .then((geo) => {
-      const d = geo.coordinates
-        .map(([lon, lat], index) => {
-          const [x, y] = project(lat, lon);
-          return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-        })
-        .join("");
-      state.geometry.set(key, d);
-      return d;
+      const points = geo.coordinates.map(([lon, lat]) => project(lat, lon));
+      state.geometry.set(key, points);
+      return points;
     })
-    .catch(() => state.geometry.set(key, null));
+    .catch(() => {
+      state.geometry.set(key, null);
+      return null;
+    });
   state.geometry.set(key, promise);
   return promise;
 }
 
-function pathForLegs(hubIds) {
-  const parts = [];
-  for (let i = 0; i < hubIds.length - 1; i += 1) {
-    const a = state.hubs.find((h) => h.id === hubIds[i]);
-    const b = state.hubs.find((h) => h.id === hubIds[i + 1]);
-    const cached = state.geometry.get(`${a.id}|${b.id}`);
-    parts.push(typeof cached === "string" && cached ? cached : straightPath([a.lat, a.lon], [b.lat, b.lon]));
-  }
-  return parts.join("");
+function legPoints(fromId, toId) {
+  const cached = state.geometry.get(`${fromId}|${toId}`);
+  if (Array.isArray(cached) && cached.length) return cached;
+  const a = state.hubs.find((hub) => hub.id === fromId);
+  const b = state.hubs.find((hub) => hub.id === toId);
+  return straightPoints(a, b);
+}
+
+function toPath(points) {
+  return points.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(1)},${point[1].toFixed(1)}`).join("");
 }
 
 function hubSequence(route) {
   const start = state.vehiclesById[route.vehicle_id]?.start_hub;
-  const seq = route.stops.map((s) => s.hub_id);
+  const seq = route.stops.map((stop) => stop.hub_id);
   return start ? [start, ...seq] : seq;
 }
 
 function drawRoutes() {
   const svg = $("#map");
   document.getElementById("route-layer")?.remove();
-  const layer = el("g", { id: "route-layer" });
+  document.getElementById("stop-layer")?.remove();
+  if (!state.plan) return;
 
+  const layer = el("g", { id: "route-layer" });
   state.plan.routes.forEach((route, index) => {
     if (!route.stops.length) return;
     const color = ROUTE_COLORS[index % ROUTE_COLORS.length];
-    const d = pathForLegs(hubSequence(route));
+    const seq = hubSequence(route);
     const group = el("g", { "data-vehicle": route.vehicle_id, class: "route-group" });
+
+    const arrows = el("g");
+    let d = "";
+    for (let i = 0; i < seq.length - 1; i += 1) {
+      const points = legPoints(seq[i], seq[i + 1]);
+      d += toPath(points).replace(/^M/, i === 0 ? "M" : "L");
+      if (points.length > 3) {
+        const mid = Math.floor(points.length * 0.55);
+        const [x1, y1] = points[mid - 1];
+        const [x2, y2] = points[mid];
+        const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+        arrows.appendChild(el("path", {
+          d: "M-4,-3 L4,0 L-4,3 Z",
+          transform: `translate(${x2.toFixed(1)},${y2.toFixed(1)}) rotate(${angle.toFixed(0)})`,
+          fill: color, opacity: "0.85",
+        }));
+      }
+    }
+
     group.appendChild(el("path", { d, class: "leg leg-base" }));
-    const main = el("path", { d, class: "leg", stroke: color, "stroke-width": 3, opacity: 0.92 });
-    group.appendChild(main);
+    group.appendChild(el("path", { d, class: "leg", stroke: color, "stroke-width": 3, opacity: 0.92 }));
+    group.appendChild(arrows);
     group.appendChild(el("path", { d, class: "route-hit" }));
     group.addEventListener("mouseenter", () => setActiveRoute(route.vehicle_id));
     group.addEventListener("mouseleave", () => setActiveRoute(state.activeVehicle, true));
+    group.addEventListener("click", () => openVehicle(route.vehicle_id));
     layer.appendChild(group);
   });
-
   svg.appendChild(layer);
 
   const dots = el("g", { id: "stop-layer" });
@@ -151,20 +263,24 @@ function drawRoutes() {
     for (const stop of route.stops) {
       const [x, y] = project(stop.lat, stop.lon);
       const dot = el("circle", {
-        cx: x, cy: y, r: stop.late ? 4 : 2.8,
+        cx: x, cy: y, r: stop.late ? 4.2 : 2.9,
         fill: stop.late ? "#b3261e" : color,
-        class: "stop-dot",
-        "data-vehicle": route.vehicle_id,
+        class: "stop-dot", "data-order": stop.order_id, "data-vehicle": route.vehicle_id,
       });
+      dot.style.cursor = "pointer";
       dot.addEventListener("mouseenter", (event) => showTip(event, stop, route));
       dot.addEventListener("mouseleave", hideTip);
+      dot.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openOrder(stop.order_id, route);
+      });
       dots.appendChild(dot);
     }
   });
   svg.appendChild(dots);
 
-  // Nâng cấp dần sang đường đi thật (OSRM) mà không chặn lần vẽ đầu
   if (!state.geometryDone) refineGeometry();
+  applySearch();
 }
 
 function refineGeometry() {
@@ -192,18 +308,11 @@ function showTip(event, stop, route) {
   tip.hidden = false;
   tip.style.left = `${rect.left - wrap.left + rect.width / 2}px`;
   tip.style.top = `${rect.top - wrap.top}px`;
-  const clock = clockLabel(stop.arrive_min);
-  tip.textContent = `${stop.code} · ${clock} · ${route.plate}`;
+  tip.textContent = `${stop.code} · ${clockLabel(stop.arrive_min)} · ${route.plate}`;
 }
 
 function hideTip() {
   $("#map-tip").hidden = true;
-}
-
-function clockLabel(minutes) {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes % 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function setActiveRoute(vehicleId, reset = false) {
@@ -212,19 +321,17 @@ function setActiveRoute(vehicleId, reset = false) {
   const active = state.activeVehicle;
   document.querySelectorAll(".route-group").forEach((group) => {
     const isActive = group.dataset.vehicle === active;
-    group.style.opacity = active ? (isActive ? "1" : "0.18") : "1";
-    const main = group.querySelector("path.leg:not(.leg-base)");
-    if (main) main.setAttribute("stroke-width", isActive ? "4.5" : "3");
+    group.classList.toggle("is-dim", Boolean(active) && !isActive);
   });
   document.querySelectorAll(".route").forEach((card) => {
     card.classList.toggle("is-active", card.dataset.vehicle === active);
   });
 }
 
-/* ---------- panels ---------- */
+/* ---------------------------------------------------------------- panels */
 function renderKpis(metrics) {
   $("#kpi-km").innerHTML = `${fmtKm(metrics.total_km)} <small>km</small>`;
-  $("#kpi-ontime").innerHTML = `${fmt1(metrics.on_time_rate)} <small>%</small>`;
+  $("#kpi-ontime").innerHTML = `${fmt1(metrics.on_time_rate)}<small>%</small>`;
   $("#kpi-late").innerHTML = `${metrics.late_count} <small>/ ${metrics.orders}</small>`;
   $("#kpi-violations").innerHTML = `${metrics.blocked ?? 0} <small>chặn</small>`;
 }
@@ -232,21 +339,24 @@ function renderKpis(metrics) {
 function renderRoutes(routes) {
   const container = $("#routes");
   container.innerHTML = "";
-  const used = routes.filter((r) => r.stops.length);
+  const used = routes.filter((route) => route.stops.length);
   $("#route-count").textContent = `${used.length} tuyến`;
   if (!used.length) {
-    container.innerHTML = '<p class="empty">Chưa có kế hoạch.</p>';
+    container.innerHTML = '<p class="empty">Chưa có kế hoạch. Bấm <b>Lập kế hoạch</b> ở góc trên.</p>';
     return;
   }
 
   used.sort((a, b) => b.stops.length - a.stops.length);
-  used.forEach((route, index) => {
+  for (const route of used) {
     const color = ROUTE_COLORS[routes.indexOf(route) % ROUTE_COLORS.length];
     const vehicle = state.vehiclesById[route.vehicle_id];
     const loadPct = Math.min(100, (route.load_kg / vehicle.capacity_kg) * 100);
     const card = document.createElement("div");
     card.className = "route";
     card.dataset.vehicle = route.vehicle_id;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Tuyến ${route.plate}, ${route.driver}, ${route.stops.length} điểm`);
     card.innerHTML = `
       <div class="route-top">
         <span class="route-plate" style="background:${color}">${route.plate}</span>
@@ -256,14 +366,17 @@ function renderRoutes(routes) {
       <div class="route-bar"><i class="${route.over_capacity ? "is-over" : ""}" style="width:${loadPct}%;${route.over_capacity ? "" : `background:${color}`}"></i></div>
       <div class="route-foot">
         <span>Tải <b>${fmt1(route.load_kg)}/${fmtKm(vehicle.capacity_kg)} kg</b></span>
-        <span>Về muộn nhất <b>${clockLabel(lastArrival(route))}</b></span>
+        <span>Xong lúc <b>${clockLabel(lastArrival(route))}</b></span>
         ${route.late_count ? `<span class="tag-late">${route.late_count} trễ</span>` : ""}
       </div>`;
     card.addEventListener("mouseenter", () => setActiveRoute(route.vehicle_id));
     card.addEventListener("mouseleave", () => setActiveRoute(null, true));
-    card.addEventListener("click", () => setActiveRoute(route.vehicle_id));
+    card.addEventListener("click", () => openVehicle(route.vehicle_id));
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(route.vehicle_id); }
+    });
     container.appendChild(card);
-  });
+  }
 }
 
 function lastArrival(route) {
@@ -306,91 +419,12 @@ function renderViolations(violations, initial) {
     return;
   }
   box.innerHTML = violations
-    .map(
-      (v) => `<div class="violation">
-        <span class="v-id">${v.rule_id}</span>
-        <span class="v-detail"><b>${v.title}</b><br><span>${v.detail}</span></span>
-        <span class="v-level ${v.level}">${v.level === "chan" ? "chặn" : "cảnh báo"}</span>
-      </div>`,
-    )
+    .map((violation) => `<div class="violation">
+        <span class="v-id">${violation.rule_id}</span>
+        <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}</span></span>
+        <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+      </div>`)
     .join("");
-}
-
-/* ---------- actions ---------- */
-async function loadScenario() {
-  const seed = Number($("#seed").value) || 7;
-  const orders = Number($("#orders").value) || 48;
-  state.scenario = await api(`/api/scenario?seed=${seed}&orders=${orders}`);
-  state.vehiclesById = Object.fromEntries(state.scenario.vehicles.map((v) => [v.id, v]));
-  $("#scenario-meta").textContent = `${state.scenario.orders.length} đơn · ${state.scenario.vehicles.length} xe · seed ${state.scenario.seed}`;
-}
-
-async function runPlan() {
-  const button = $("#plan-btn");
-  button.disabled = true;
-  button.lastChild.textContent = " Đang tính…";
-  try {
-    await loadScenario();
-    const payload = {
-      seed: Number($("#seed").value) || 7,
-      orders: Number($("#orders").value) || 48,
-      vehicles: state.scenario.vehicles.length,
-      eta: $("#use-ml").checked ? "ml" : "osrm",
-    };
-    const plan = await api("/api/plan", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    state.plan = plan;
-    state.activeVehicle = null;
-    state.geometryDone = false;
-    drawGrid();
-    drawHubs();
-    drawRoutes();
-    renderKpis(plan.metrics);
-    renderRoutes(plan.routes);
-    renderSteps(plan.steps);
-    renderViolations(plan.violations, plan.violations_initial?.length);
-    document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
-    $("#map-hint").textContent = `${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
-  } catch (error) {
-    $("#map-hint").textContent = `Lỗi: ${error.message}`;
-  } finally {
-    button.disabled = false;
-    button.lastChild.textContent = " Lập kế hoạch";
-  }
-}
-
-async function simulateIncident(kind) {
-  if (!state.plan) return;
-  const used = state.plan.routes.filter((r) => r.stops.length).sort((a, b) => b.stops.length - a.stops.length);
-  if (!used.length) return;
-
-  const payload = {
-    kind,
-    seed: Number($("#seed").value) || 7,
-    orders: Number($("#orders").value) || 48,
-    eta: $("#use-ml").checked ? "ml" : "osrm",
-  };
-  if (kind === "breakdown") payload.vehicle_id = used[0].vehicle_id;
-
-  const result = await api("/api/incident", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  state.plan = result;
-  state.geometryDone = false;
-  drawGrid();
-  drawHubs();
-  drawRoutes();
-  renderKpis(result.metrics);
-  renderRoutes(result.routes);
-  renderSteps(result.steps);
-  renderViolations(result.violations, result.violations_initial?.length);
-  renderIncidentStrip(result);
 }
 
 const INCIDENT_LABEL = { breakdown: "Xe hỏng", congestion: "Kẹt xe", depot_closed: "Kho đóng", truck_ban: "Cấm tải" };
@@ -403,7 +437,7 @@ function renderIncidentStrip(result) {
   const delta = (a, b, unit, digits = 0) => {
     const diff = b - a;
     const cls = Math.abs(diff) < 0.05 ? "" : diff > 0 ? "up" : "down";
-    const text = `${diff > 0 ? "+" : ""}${diff.toFixed(digits)}${unit}`;
+    const text = `${diff > 0 ? "+" : ""}${viNum(diff, digits)}${unit}`;
     return `<i class="${cls}">${text}</i>`;
   };
   const cells = [
@@ -420,11 +454,256 @@ function renderIncidentStrip(result) {
   strip.hidden = false;
 }
 
+/* ---------------------------------------------------------------- drawer */
+function openDrawer(kicker, title, html) {
+  $("#drawer-kicker").textContent = kicker;
+  $("#drawer-title").textContent = title;
+  $("#drawer-body").innerHTML = html;
+  $("#drawer").hidden = false;
+}
+
+function closeDrawer() {
+  $("#drawer").hidden = true;
+}
+
+function openOrder(orderId, route) {
+  const order = state.ordersById[orderId];
+  if (!order) return;
+  const stop = route?.stops.find((item) => item.order_id === orderId);
+  const vehicle = route ? state.vehiclesById[route.vehicle_id] : null;
+  const due = 8 * 60 + order.promised_min;
+  const rules = (state.plan?.violations || []).filter((violation) => violation.order_id === orderId);
+
+  const kv = [
+    ["Mã đơn", order.code],
+    ["Cửa hàng", order.shop],
+    ["Địa chỉ", order.address],
+    ["Hàng hoá", `${order.goods_label} · ${fmt1(order.weight_kg)} kg · ${fmt1(order.volume_l)} L`],
+    ["Thu hộ", order.cod ? `${viNum(order.cod)} đ` : "Không thu hộ"],
+    ["Ưu tiên", `${order.priority_label} · hạn ${order.promised_min} phút`],
+    ["Hạn giao", clockLabel(due)],
+  ];
+  if (stop) kv.push(["Tới nơi", `${clockLabel(stop.arrive_min)} (${stop.late ? `trễ ${fmtKm(stop.late_min)} phút` : "đúng hạn"})`]);
+  if (vehicle) kv.push(["Tài xế", `${vehicle.driver} · ${route.plate} (${vehicle.label})`]);
+  if (stop && route) kv.push(["Thứ tự", `điểm ${route.stops.indexOf(stop) + 1} / ${route.stops.length}`]);
+
+  const rulesHtml = rules.length
+    ? rules.map((violation) => `<div class="drawer-rule">
+         <b>${violation.rule_id} — ${violation.title}</b>
+         <span>${violation.detail}</span>
+         <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+       </div>`).join("")
+    : '<p class="empty" style="margin:0">Không có luật nào kích hoạt trên đơn này.</p>';
+
+  openDrawer(
+    `Chi tiết đơn · ${order.code}`,
+    order.shop,
+    `<div class="drawer-section">
+       <dl class="kv">${kv.map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("")}</dl>
+     </div>
+     <div class="drawer-section">
+       <h4>Cơ sở tri thức áp cho đơn này</h4>
+       ${rulesHtml}
+     </div>
+     ${route ? '<div class="drawer-actions"><button class="btn btn-ghost" id="drawer-open-route">Xem cả tuyến</button></div>' : ""}`,
+  );
+
+  const button = $("#drawer-open-route");
+  if (button) button.addEventListener("click", () => openVehicle(route.vehicle_id));
+}
+
+function openVehicle(vehicleId) {
+  const route = state.plan?.routes.find((item) => item.vehicle_id === vehicleId);
+  if (!route) return;
+  const vehicle = state.vehiclesById[vehicleId];
+  const lateMinutes = route.late_minutes ?? 0;
+
+  const kv = [
+    ["Tài xế", vehicle.driver],
+    ["Loại xe", vehicle.label],
+    ["Tải", `${fmt1(route.load_kg)} / ${fmtKm(vehicle.capacity_kg)} kg`],
+    ["Quãng đường", `${fmtKm(route.total_km)} km`],
+    ["Thời gian chạy", `${fmtKm(route.total_min)} phút`],
+    ["Số điểm", `${route.stops.length}`],
+    ["Đơn trễ", route.late_count ? `${route.late_count} (${fmtKm(lateMinutes)} phút)` : "không"],
+  ];
+
+  const timeline = route.stops
+    .map((stop) => {
+      const order = state.ordersById[stop.order_id];
+      const tail = stop.late ? `<span class="t-late" title="trễ ${fmtKm(stop.late_min)} phút">+${fmtKm(stop.late_min)}′</span>`
+        : '<span class="t-ok" title="đúng hạn">✓</span>';
+      return `<li>
+        <time>${clockLabel(stop.arrive_min)}</time>
+        <span>${order ? `${order.shop}<em class="t-addr" title="${order.address}">${order.address}</em>` : stop.code}</span>
+        ${tail}
+      </li>`;
+    })
+    .join("");
+
+  openDrawer(
+    `Tuyến · ${route.plate}`,
+    `${vehicle.driver} — ${route.stops.length} điểm`,
+    `<div class="drawer-section">
+       <dl class="kv">${kv.map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("")}</dl>
+     </div>
+     <div class="drawer-section">
+       <h4>Lịch giao theo giờ</h4>
+       <ol class="timeline">${timeline}</ol>
+     </div>`,
+  );
+  setActiveRoute(vehicleId);
+}
+
+/* ---------------------------------------------------------------- tìm kiếm */
+function matchesSearch(order) {
+  if (!state.search) return true;
+  const needle = state.search.toLowerCase();
+  const hub = state.hubs.find((item) => item.id === order.dest_hub);
+  return [order.code, order.shop, order.address, order.goods_label, order.priority_label,
+    order.dest_hub, hub?.name ?? "", hub?.district ?? ""].join(" ").toLowerCase().includes(needle);
+}
+
+function applySearch() {
+  const chip = $("#search-count");
+  const dots = document.querySelectorAll(".stop-dot");
+  if (!state.search) {
+    dots.forEach((dot) => dot.classList.remove("is-dim", "is-hit"));
+    chip.hidden = true;
+    document.querySelectorAll(".route-group").forEach((group) => group.classList.remove("is-dim"));
+    return;
+  }
+  let hits = 0;
+  dots.forEach((dot) => {
+    const order = state.ordersById[dot.dataset.order];
+    const hit = order ? matchesSearch(order) : false;
+    dot.classList.toggle("is-hit", hit);
+    dot.classList.toggle("is-dim", !hit);
+    if (hit) hits += 1;
+  });
+  const total = Object.keys(state.ordersById).length;
+  chip.textContent = `${hits}/${total} đơn khớp`;
+  chip.hidden = false;
+}
+
+/* ---------------------------------------------------------------- actions */
+async function loadScenario() {
+  const seed = Number($("#seed").value) || 7;
+  const orders = Number($("#orders").value) || 48;
+  state.scenario = await api(`/api/scenario?seed=${seed}&orders=${orders}`);
+  state.vehiclesById = Object.fromEntries(state.scenario.vehicles.map((item) => [item.id, item]));
+  state.ordersById = Object.fromEntries(state.scenario.orders.map((item) => [item.id, item]));
+  $("#scenario-meta").textContent = `${state.scenario.orders.length} đơn · ${state.scenario.vehicles.length} xe · seed ${state.scenario.seed}`;
+}
+
+function paintPlan(plan) {
+  state.plan = plan;
+  state.activeVehicle = null;
+  state.geometryDone = false;
+  drawBase();
+  drawHubs();
+  drawScale();
+  drawRoutes();
+  renderKpis(plan.metrics);
+  renderRoutes(plan.routes);
+  renderSteps(plan.steps);
+  renderViolations(plan.violations, plan.violations_initial?.length);
+  $("#export-btn").disabled = false;
+  document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
+  $("#map-hint").textContent = `${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
+}
+
+async function runPlan() {
+  const button = $("#plan-btn");
+  button.disabled = true;
+  button.classList.add("is-busy");
+  try {
+    await loadScenario();
+    const plan = await api("/api/plan", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        seed: Number($("#seed").value) || 7,
+        orders: Number($("#orders").value) || 48,
+        vehicles: state.scenario.vehicles.length,
+        eta: $("#use-ml").checked ? "ml" : "osrm",
+      }),
+    });
+    paintPlan(plan);
+    toast(`Đã lập kế hoạch: ${plan.metrics.orders} đơn · ${fmtKm(plan.metrics.total_km)} km · ${plan.metrics.late_count} trễ`);
+  } catch (error) {
+    toast(`Không lập được kế hoạch: ${error.message}`, "error");
+  } finally {
+    button.disabled = false;
+    button.classList.remove("is-busy");
+  }
+}
+
+async function simulateIncident(kind) {
+  if (!state.plan) return;
+  const used = state.plan.routes.filter((route) => route.stops.length).sort((a, b) => b.stops.length - a.stops.length);
+  if (!used.length) return;
+  const payload = {
+    kind,
+    seed: Number($("#seed").value) || 7,
+    orders: Number($("#orders").value) || 48,
+    eta: $("#use-ml").checked ? "ml" : "osrm",
+  };
+  if (kind === "breakdown") payload.vehicle_id = used[0].vehicle_id;
+  try {
+    const result = await api("/api/incident", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    state.plan = result;
+    state.geometryDone = false;
+    drawBase();
+    drawHubs();
+    drawScale();
+    drawRoutes();
+    renderKpis(result.metrics);
+    renderRoutes(result.routes);
+    renderSteps(result.steps);
+    renderViolations(result.violations, result.violations_initial?.length);
+    renderIncidentStrip(result);
+    toast(`${INCIDENT_LABEL[kind]} — đã lập lại kế hoạch`);
+  } catch (error) {
+    toast(`Không xử lý được sự cố: ${error.message}`, "error");
+  }
+}
+
+function exportCsv() {
+  if (!state.plan) return;
+  const rows = [["Tài xế", "Biển số", "Xe", "Thứ tự", "Mã đơn", "Cửa hàng", "Địa chỉ", "Giờ tới", "Trạng thái", "Khối lượng (kg)"]];
+  for (const route of state.plan.routes) {
+    const vehicle = state.vehiclesById[route.vehicle_id];
+    route.stops.forEach((stop, index) => {
+      const order = state.ordersById[stop.order_id] || {};
+      rows.push([
+        vehicle.driver, route.plate, vehicle.label, index + 1, stop.code,
+        order.shop || "", order.address || "", clockLabel(stop.arrive_min),
+        stop.late ? `trễ ${Math.round(stop.late_min)} phút` : "đúng hạn",
+        String(stop.weight_kg),
+      ]);
+    });
+  }
+  const csv = "\ufeff" + rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `dudu-ke-hoach-${$("#seed").value}-${$("#orders").value}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  toast("Đã tải phiếu giao dạng CSV");
+}
+
+/* ---------------------------------------------------------------- modal */
 async function openRules() {
   const data = await api("/api/rules");
   const initial = state.plan?.violations_initial ?? [];
   const left = state.plan?.violations ?? [];
-  const countOf = (list, id) => list.filter((v) => v.rule_id === id).length;
+  const countOf = (list, id) => list.filter((violation) => violation.rule_id === id).length;
 
   const sections = [
     ["chan", "Mức chặn — tác tử buộc phải sửa trước khi chốt kế hoạch"],
@@ -471,29 +750,30 @@ async function openCompare() {
     rows.reduce((a, b) => ((mode === "min" ? b[key] < a[key] : b[key] > a[key]) ? b : a), rows[0]);
 
   const assignmentHtml = table(
-    ["Chiến lược", "km", "phút", "trễ", "quan tải"],
-    data.assignment.map((r) => [
-      strategyLabel(r.strategy),
-      fmt1(r.total_km),
-      fmt1(r.total_min),
-      String(r.late_count),
-      String(r.over_capacity_routes),
+    ["Chiến lược", "km", "phút", "trễ", "quá tải"],
+    data.assignment.map((row) => [
+      strategyLabel(row.strategy),
+      fmt1(row.total_km),
+      fmt1(row.total_min),
+      String(row.late_count),
+      String(row.over_capacity_routes),
     ]),
     data.assignment.indexOf(best(data.assignment, "total_km")),
   );
 
   const routingHtml = table(
     ["Chiến lược xếp tuyến", "km", "phút", "trễ", "phút trễ"],
-    data.routing.map((r) => [
-      r.routing,
-      fmt1(r.total_km),
-      fmt1(r.total_min),
-      String(r.late_count),
-      String(Math.round(r.late_minutes)),
+    data.routing.map((row) => [
+      row.routing,
+      fmt1(row.total_km),
+      fmt1(row.total_min),
+      String(row.late_count),
+      String(Math.round(row.late_minutes)),
     ]),
     data.routing.indexOf(best(data.routing, "on_time_rate", "max")),
   );
 
+  $("#modal-title").textContent = "So sánh chiến lược";
   $("#modal-body").innerHTML = `
     <p class="cmp-title">Cách chia đơn cho tài xế</p>${assignmentHtml}
     <p class="cmp-title" style="margin-top:18px">Cách xếp thứ tự giao trong tuyến</p>${routingHtml}
@@ -511,13 +791,14 @@ function strategyLabel(key) {
 }
 
 function table(headers, rows, highlightIndex) {
-  const head = `<tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>`;
+  const head = `<tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>`;
   const body = rows
-    .map((cells, index) => `<tr class="${index === highlightIndex ? "is-best" : ""}">${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`)
+    .map((cells, index) => `<tr class="${index === highlightIndex ? "is-best" : ""}">${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
     .join("");
   return `<table class="cmp">${head}${body}</table>`;
 }
 
+/* ---------------------------------------------------------------- boot */
 async function loadEtaInfo() {
   try {
     const info = await api("/api/eta/info");
@@ -536,36 +817,43 @@ async function loadEtaInfo() {
   }
 }
 
-/* ---------- boot ---------- */
 (async function boot() {
   const hubs = await api("/api/hubs");
   state.hubs = hubs.hubs;
   state.bounds = hubs.bounds;
   await loadScenario();
-  drawGrid();
+  drawBase();
   drawHubs();
+  drawScale();
   await loadEtaInfo();
 
   $("#plan-btn").addEventListener("click", runPlan);
+  $("#compare-btn").addEventListener("click", openCompare);
+  $("#export-btn").addEventListener("click", exportCsv);
   document.querySelectorAll(".incident").forEach((button) => {
     button.addEventListener("click", () => simulateIncident(button.id.replace("incident-", "").replace("depot", "depot_closed")));
   });
-  $("#compare-btn").addEventListener("click", openCompare);
   document.querySelectorAll(".rail-btn").forEach((button) => {
     button.addEventListener("click", () => {
       document.querySelectorAll(".rail-btn").forEach((other) => other.classList.remove("is-active"));
       button.classList.add("is-active");
       if (button.dataset.view === "rules") openRules();
-      if (button.dataset.view === "routes") $("#routes").scrollIntoView({ behavior: "smooth", block: "start" });
-      if (button.dataset.view === "dispatch") $("#modal").hidden = true;
+      if (button.dataset.view === "compare") openCompare();
+      if (button.dataset.view === "dispatch") { $("#modal").hidden = true; closeDrawer(); }
     });
   });
-  $("#modal-close").addEventListener("click", () => { $("#modal").hidden = true; });
-  $("#modal").addEventListener("click", (event) => {
-    if (event.target.id === "modal") $("#modal").hidden = true;
+
+  $("#search").addEventListener("input", (event) => {
+    state.search = event.target.value.trim();
+    applySearch();
   });
+
+  $("#drawer-close").addEventListener("click", closeDrawer);
+  $("#modal-close").addEventListener("click", () => { $("#modal").hidden = true; });
+  $("#modal").addEventListener("click", (event) => { if (event.target.id === "modal") $("#modal").hidden = true; });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") $("#modal").hidden = true;
+    if (event.key === "Escape") { $("#modal").hidden = true; closeDrawer(); }
   });
 })();
+
 
