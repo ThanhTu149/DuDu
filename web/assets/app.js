@@ -115,20 +115,22 @@ function initMapControls() {
     event.preventDefault();
     zoomAt(event.deltaY > 0 ? 1.14 : 0.88, event.clientX, event.clientY);
   }, { passive: false });
+  svg.addEventListener("click", () => closeMapCard());
 
   let drag = null;
   svg.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
-    drag = { x: event.clientX, y: event.clientY, view: { ...state.view }, moved: 0 };
-    svg.setPointerCapture(event.pointerId);
+    drag = { x: event.clientX, y: event.clientY, view: { ...state.view }, moved: 0, captured: false };
   });
   svg.addEventListener("pointermove", (event) => {
     if (!drag) return;
     const rect = svg.getBoundingClientRect();
     drag.moved += Math.abs(event.movementX) + Math.abs(event.movementY);
-    if (drag.moved > 6) {
+    if (drag.moved > 6 && !drag.captured) {
+      drag.captured = true;
       state.suppressClick = true;
       $(".map-wrap").classList.add("is-panning");
+      svg.setPointerCapture(event.pointerId);
     }
     state.view = {
       x: drag.view.x - ((event.clientX - drag.x) * drag.view.w) / rect.width,
@@ -318,6 +320,7 @@ function hubSequence(route) {
 }
 
 function drawRoutes() {
+  closeMapCard();
   const svg = $("#map");
   document.getElementById("route-layer")?.remove();
   document.getElementById("stop-layer")?.remove();
@@ -362,22 +365,40 @@ function drawRoutes() {
   const dots = el("g", { id: "stop-layer" });
   state.plan.routes.forEach((route, index) => {
     const color = ROUTE_COLORS[index % ROUTE_COLORS.length];
-    for (const stop of route.stops) {
+    route.stops.forEach((stop, order) => {
       const [x, y] = project(stop.lat, stop.lon);
+      if (stop.late) {
+        dots.appendChild(el("circle", {
+          cx: x, cy: y, r: 5, class: "stop-ring is-late", "data-vehicle": route.vehicle_id,
+        }));
+      }
       const dot = el("circle", {
         cx: x, cy: y, r: stop.late ? 4.2 : 2.9,
-        fill: stop.late ? "#b3261e" : color,
+        fill: color,
+        stroke: stop.late ? "#b3261e" : "#fff",
+        "stroke-width": stop.late ? 1.6 : 1.1,
         class: "stop-dot", "data-order": stop.order_id, "data-vehicle": route.vehicle_id,
       });
-      dot.style.cursor = "pointer";
-      dot.addEventListener("mouseenter", (event) => showTip(event, stop, route));
-      dot.addEventListener("mouseleave", hideTip);
-      dot.addEventListener("click", (event) => {
-        event.stopPropagation();
-        openOrder(stop.order_id, route);
+      dot.style.pointerEvents = "none";
+      const hit = el("circle", {
+        cx: x, cy: y, r: 9, class: "stop-hit", "data-order": stop.order_id, "data-vehicle": route.vehicle_id,
       });
+      hit.addEventListener("mouseenter", (event) => showTip(event, stop, route));
+      hit.addEventListener("mouseleave", hideTip);
+      hit.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (state.suppressClick) return;
+        showMapCard(event, stop, route);
+      });
+      dots.appendChild(hit);
       dots.appendChild(dot);
-    }
+
+      const number = el("text", {
+        x, y: y + 2.7, class: "stop-num", "data-vehicle": route.vehicle_id,
+      });
+      number.textContent = String(order + 1);
+      dots.appendChild(number);
+    });
   });
   svg.appendChild(dots);
 
@@ -417,6 +438,48 @@ function hideTip() {
   $("#map-tip").hidden = true;
 }
 
+function showMapCard(event, stop, route) {
+  hideTip();
+  const order = state.ordersById[stop.order_id] || {};
+  let card = $("#map-card");
+  if (!card) {
+    card = document.createElement("div");
+    card.id = "map-card";
+    card.className = "map-card";
+    $(".map-wrap").appendChild(card);
+  }
+  const wrap = $(".map-wrap").getBoundingClientRect();
+  const left = Math.min(Math.max(event.clientX - wrap.left - 118, 8), wrap.width - 252);
+  const top = Math.min(Math.max(event.clientY - wrap.top - 150, 8), wrap.height - 190);
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+  card.innerHTML = `
+    <button class="mc-close" aria-label="Đóng" title="Đóng">×</button>
+    <h4>${order.shop || stop.code}</h4>
+    <p class="mc-meta">${stop.code} · ${route.plate}</p>
+    <dl>
+      <dt>Hạn giao</dt><dd class="mono">${clockLabel(8 * 60 + (order.promised_min || 0))}</dd>
+      <dt>Tới nơi</dt><dd class="mono">${clockLabel(stop.arrive_min)} ${stop.late ? `<span class="tag-late">+${fmtKm(stop.late_min)}′</span>` : ""}</dd>
+      <dt>Thu hộ</dt><dd class="mono">${order.cod ? `${viNum(order.cod)} đ` : "—"}</dd>
+      <dt>Hàng</dt><dd>${order.goods_label || ""} · ${fmt1(stop.weight_kg)} kg</dd>
+    </dl>
+    <div class="mc-actions">
+      <button class="btn btn-ghost" id="mc-detail">Chi tiết</button>
+    </div>`;
+  card.hidden = false;
+  card.querySelector(".mc-close").addEventListener("click", () => { card.hidden = true; });
+  card.querySelector("#mc-detail").addEventListener("click", () => {
+    card.hidden = true;
+    openOrder(stop.order_id, route, { back: true });
+  });
+  card.addEventListener("click", (clickEvent) => clickEvent.stopPropagation());
+}
+
+function closeMapCard() {
+  const card = $("#map-card");
+  if (card) card.hidden = true;
+}
+
 function setActiveRoute(vehicleId, reset = false) {
   if (reset && !vehicleId) return;
   state.activeVehicle = vehicleId || null;
@@ -428,14 +491,23 @@ function setActiveRoute(vehicleId, reset = false) {
   document.querySelectorAll(".route").forEach((card) => {
     card.classList.toggle("is-active", card.dataset.vehicle === active);
   });
+  document.querySelectorAll(".stop-num").forEach((label) => {
+    label.classList.toggle("is-on", Boolean(active) && label.dataset.vehicle === active);
+  });
 }
 
 /* ---------------------------------------------------------------- panels */
 function renderKpis(metrics) {
+  const blocked = metrics.blocked ?? 0;
+  const total = metrics.violations ?? 0;
   $("#kpi-km").innerHTML = `${fmtKm(metrics.total_km)} <small>km</small>`;
   $("#kpi-ontime").innerHTML = `${fmt1(metrics.on_time_rate)}<small>%</small>`;
   $("#kpi-late").innerHTML = `${metrics.late_count} <small>/ ${metrics.orders}</small>`;
-  $("#kpi-violations").innerHTML = `${metrics.blocked ?? 0} <small>chặn</small>`;
+  $("#kpi-violations").innerHTML = `${blocked} <small>chặn</small> · ${total - blocked} <small>cảnh báo</small>`;
+  const note = $("#kpi-note");
+  if (note) {
+    note.textContent = `${metrics.vehicles_used} xe · ${metrics.orders} điểm giao · ${fmt1(metrics.total_min)} phút xe chạy`;
+  }
 }
 
 function renderRoutes(routes) {
@@ -448,11 +520,20 @@ function renderRoutes(routes) {
     return;
   }
 
+  const blockedByVehicle = {};
+  const warningByVehicle = {};
+  for (const violation of state.plan?.violations || []) {
+    const bucket = violation.level === "chan" ? blockedByVehicle : warningByVehicle;
+    bucket[violation.vehicle_id] = (bucket[violation.vehicle_id] || 0) + 1;
+  }
+
   used.sort((a, b) => b.stops.length - a.stops.length);
   for (const route of used) {
     const color = ROUTE_COLORS[routes.indexOf(route) % ROUTE_COLORS.length];
     const vehicle = state.vehiclesById[route.vehicle_id];
     const loadPct = Math.min(100, (route.load_kg / vehicle.capacity_kg) * 100);
+    const blocked = blockedByVehicle[route.vehicle_id] || 0;
+    const warnings = warningByVehicle[route.vehicle_id] || 0;
     const card = document.createElement("div");
     card.className = "route";
     card.dataset.vehicle = route.vehicle_id;
@@ -461,15 +542,20 @@ function renderRoutes(routes) {
     card.setAttribute("aria-label", `Tuyến ${route.plate}, ${route.driver}, ${route.stops.length} điểm`);
     card.innerHTML = `
       <div class="route-top">
-        <span class="route-plate" style="background:${color}">${route.plate}</span>
-        <span class="route-driver">${route.driver}</span>
+        <span class="route-dot" style="background:${color}"></span>
+        <div>
+          <div class="route-driver">${route.driver}</div>
+          <div class="route-sub"><span class="route-plate">${route.plate}</span> ${vehicle.label}</div>
+        </div>
         <span class="route-meta">${route.stops.length} điểm · ${fmtKm(route.total_km)} km</span>
       </div>
-      <div class="route-bar"><i class="${route.over_capacity ? "is-over" : ""}" style="width:${loadPct}%;${route.over_capacity ? "" : `background:${color}`}"></i></div>
+      <div class="route-bar"><i style="width:${loadPct}%;background:${route.over_capacity ? "var(--alert)" : color}"></i></div>
       <div class="route-foot">
-        <span>Tải <b>${fmt1(route.load_kg)}/${fmtKm(vehicle.capacity_kg)} kg</b></span>
-        <span>Xong lúc <b>${clockLabel(lastArrival(route))}</b></span>
+        <span><b>${fmt1(route.load_kg)}/${fmtKm(vehicle.capacity_kg)}</b> kg</span>
+        <span>xong <b>${clockLabel(lastArrival(route))}</b></span>
         ${route.late_count ? `<span class="tag-late">${route.late_count} trễ</span>` : ""}
+        ${blocked ? `<span class="badge-block">${blocked} chặn</span>` : ""}
+        ${warnings ? `<span class="badge-warn">${warnings} cảnh báo</span>` : ""}
       </div>`;
     card.addEventListener("mouseenter", () => setActiveRoute(route.vehicle_id));
     card.addEventListener("mouseleave", () => setActiveRoute(null, true));
@@ -496,10 +582,11 @@ function renderSteps(steps) {
   }
   for (const step of steps) {
     const li = document.createElement("li");
+    li.className = `stage-${step.stage}`;
     li.innerHTML = `
-      <span class="step-idx">${String(step.index).padStart(2, "0")}</span>
-      <span class="step-stage is-${step.stage}">${stageLabel(step.stage)}</span>
-      <span class="step-body"><strong>${step.title}</strong> — <span>${step.detail}</span></span>`;
+      <span class="step-stage">${stageLabel(step.stage)}</span>
+      <span class="step-body"><strong>${step.title}</strong> — <span>${step.detail}</span></span>
+      <span class="step-ms">+${step.ms ?? 0} ms</span>`;
     list.appendChild(li);
   }
 }
@@ -508,25 +595,63 @@ function stageLabel(stage) {
   return { perceive: "nhận biết", decide: "quyết định", act: "hành động", verify: "kiểm tra" }[stage] || stage;
 }
 
+let violationFilter = "all";
+
 function renderViolations(violations, initial) {
   const box = $("#violations");
   const meta = $("#violations-meta");
+  state.violations = violations || [];
+  state.violationsInitial = initial;
+  const blocked = (violations || []).filter((violation) => violation.level === "chan").length;
+  const total = violations?.length ?? 0;
   if (meta) {
-    meta.textContent = initial == null ? `${violations?.length ?? 0} vi phạm`
-      : `${initial} → ${violations?.length ?? 0}`;
-    meta.title = "Số vi phạm ở vòng kiểm tra đầu → còn lại sau khi tác tử sửa";
+    meta.textContent = total ? `${total} vi phạm · ${blocked} chặn · ${total - blocked} cảnh báo` : "0 vi phạm";
+    meta.title = initial == null ? "Vi phạm còn lại sau khi tác tử sửa"
+      : `Vòng kiểm tra đầu có ${initial} vi phạm, sau khi sửa còn ${total}`;
   }
-  if (!violations?.length) {
+  document.querySelectorAll("#rule-filters .tab").forEach((tab) => {
+    const filter = tab.dataset.filter;
+    const count = filter === "all" ? total
+      : (violations || []).filter((violation) => violation.level === filter).length;
+    const label = { all: "Tất cả", chan: "Chặn", canh_bao: "Cảnh báo" }[filter];
+    tab.textContent = `${label} (${count})`;
+    tab.classList.toggle("is-active", filter === violationFilter);
+  });
+
+  if (!total) {
     box.innerHTML = '<p class="empty">Không có vi phạm — kế hoạch chạy sạch.</p>';
     return;
   }
-  box.innerHTML = violations
-    .map((violation) => `<div class="violation">
+  const shown = violationFilter === "all"
+    ? violations
+    : violations.filter((violation) => violation.level === violationFilter);
+  box.innerHTML = shown.length ? shown
+    .map((violation) => `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" title="Bấm để xem trên bản đồ">
         <span class="v-id">${violation.rule_id}</span>
         <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}</span></span>
         <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
       </div>`)
-    .join("");
+    .join("") : '<p class="empty">Không có vi phạm ở mức này.</p>';
+
+  document.querySelectorAll(".violation[data-order]").forEach((row) => {
+    row.addEventListener("click", () => {
+      document.querySelectorAll(".violation").forEach((other) => other.classList.remove("is-hot"));
+      row.classList.add("is-hot");
+      focusOrder(row.dataset.order);
+    });
+  });
+}
+
+function focusOrder(orderId) {
+  const order = state.ordersById[orderId];
+  if (!order) return;
+  const point = project(order.lat, order.lon);
+  const width = 260;
+  const height = 160;
+  state.view = { x: point[0] - width / 2, y: point[1] - height / 2, w: width, h: height };
+  applyView();
+  const hit = orderIndex().get(orderId);
+  openOrder(orderId, hit?.route);
 }
 
 const INCIDENT_LABEL = { breakdown: "Xe hỏng", congestion: "Kẹt xe", depot_closed: "Kho đóng", truck_ban: "Cấm tải" };
@@ -536,24 +661,40 @@ function renderIncidentStrip(result) {
   const after = result.metrics;
   if (!before) return;
   const strip = $("#incident-strip");
-  const delta = (a, b, unit, digits = 0) => {
-    const diff = b - a;
-    const cls = Math.abs(diff) < 0.05 ? "" : diff > 0 ? "up" : "down";
-    const text = `${diff > 0 ? "+" : ""}${viNum(diff, digits)}${unit}`;
-    return `<i class="${cls}">${text}</i>`;
+  const cell = (label, before_, after_, unit, digits = 0) => {
+    const diff = after_ - before_;
+    const cls = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
+    const arrow = Math.abs(diff) < 0.05 ? "±" : diff > 0 ? "+" : "−";
+    return `<div class="incident-cell">
+      <span>${label} · trước ${viNum(before_, digits)}${unit}</span>
+      <b>${viNum(after_, digits)}${unit}</b>
+      <span class="pill-delta ${cls}">${arrow}${viNum(Math.abs(diff), digits)}${unit}</span>
+    </div>`;
   };
-  const cells = [
-    ["Quãng đường", `${before.total_km.toFixed(0)}→${after.total_km.toFixed(0)} km`, delta(before.total_km, after.total_km, " km")],
-    ["Đơn trễ", `${before.late_count}→${after.late_count}`, delta(before.late_count, after.late_count, "")],
-    ["Vi phạm", `${before.violations}→${after.violations}`, delta(before.violations, after.violations, "")],
-  ];
   strip.innerHTML = `
-    <div class="incident-cell" style="grid-column:1 / -1; background:#fff; padding:6px 10px">
-      <span>Sự cố ${INCIDENT_LABEL[result.incident?.kind] || ""} — kế hoạch trước → sau</span>
-    </div>` + cells
-    .map(([label, value, diff]) => `<div class="incident-cell"><span>${label}</span><b>${value}</b> ${diff}</div>`)
-    .join("");
+    <div class="incident-strip-head">
+      <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+        Sự cố <b>${INCIDENT_LABEL[result.incident?.kind] || ""}</b>
+      </span>
+      <button id="incident-undo" class="btn-quiet undo-btn" title="Hoàn tác sự cố, quay lại kế hoạch gốc" aria-label="Hoàn tác sự cố">↺</button>
+    </div>
+    ${cell("Quãng đường", before.total_km, after.total_km, " km")}
+    ${cell("Đơn trễ", before.late_count, after.late_count, "")}
+    ${cell("Vi phạm chặn", before.blocked ?? 0, after.blocked ?? 0, "")}`;
   strip.hidden = false;
+  $("#incident-undo")?.addEventListener("click", () => runPlan());
+  markIncident(result.incident?.kind);
+}
+
+function markIncident(kind) {
+  const map = { breakdown: "incident-breakdown", congestion: "incident-congestion", depot_closed: "incident-depot" };
+  document.querySelectorAll(".incident").forEach((button) => {
+    button.classList.toggle("is-active", button.id === map[kind]);
+  });
+  if (!kind) {
+    document.querySelectorAll(".incident").forEach((button) => button.classList.remove("is-active"));
+    $("#incident-strip").hidden = true;
+  }
 }
 
 /* ---------------------------------------------------------------- drawer */
@@ -926,6 +1067,7 @@ function paintPlan(plan) {
   renderSteps(plan.steps);
   renderViolations(plan.violations, plan.violations_initial?.length);
   renderGantt();
+  markIncident(null);
   $("#export-btn").disabled = false;
   $("#print-btn").disabled = false;
   document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
@@ -1162,6 +1304,23 @@ async function loadEtaInfo() {
   $("#compare-btn").addEventListener("click", openCompare);
   $("#export-btn").addEventListener("click", exportCsv);
   $("#print-btn").addEventListener("click", printPlan);
+  $("#config-btn").addEventListener("click", () => {
+    const pop = $("#config-pop");
+    pop.hidden = !pop.hidden;
+    $("#config-btn").setAttribute("aria-expanded", String(!pop.hidden));
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".config-wrap")) {
+      $("#config-pop").hidden = true;
+      $("#config-btn").setAttribute("aria-expanded", "false");
+    }
+  });
+  document.querySelectorAll("#rule-filters .tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      violationFilter = tab.dataset.filter;
+      renderViolations(state.violations || [], state.violationsInitial);
+    });
+  });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((other) => {

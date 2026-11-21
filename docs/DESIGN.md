@@ -185,3 +185,29 @@ rộng nếu đang ở chế độ gọn.
    từng swatch, từng mẫu chữ, từng component (nút, chip biển số, nhãn mức, thẻ KPI).
 
 Ảnh xem trước: `docs/design-system/style-sheet.png`.
+
+## 11. Bản v5 — sửa theo phản biện UX/UI
+
+Đợt rà soát thứ ba chỉ ra các điểm sau; bảng ghi nguyên nhân và cách xử lý.
+
+| Vấn đề | Cách xử lý |
+|---|---|
+| Khung tuyến bị bóp, chỉ lộ một dòng | Đưa 4 KPI ra **dải ngang** dưới header; cột phải giờ chỉ còn danh sách tuyến, thẻ gọn hơn (3 dòng thay vì 4) nên thấy 4 tuyến cùng lúc |
+| Lệch số vi phạm giữa KPI / dải sự cố / bảng luật | Một nguồn duy nhất: KPI ghi `0 chặn · 3 cảnh báo`, dải sự cố ghi `3 vi phạm · 0 chặn · 3 cảnh báo`, bảng luật cũng cùng chuỗi; tab lọc có số đếm |
+| Rớt chữ ở dải 160→187 km, nhãn HÀNH ĐỘNG xuống dòng | Delta pill đổi thành 2 tầng: số lớn `187 km` + pill `+27 km`, khoá `white-space: nowrap`; nhãn bước đổi sang pill màu cố định, không wrap |
+| Header lặp `48 đơn · 8 xe · seed 7` | Bỏ khỏi header; Seed/Đơn/ETA gom vào popover **Cấu hình giả lập ▾**, dòng meta chuyển vào cuối popover |
+| Nút sự cố không cho biết đang bật | Nút đang chạy chuyển nền đỏ nhạt + viền đỏ + chấm nhấp nháy; thêm nút `↺` hoàn tác trong dải so sánh |
+| Chú thích bản đồ nói "điểm giao màu cam" nhưng chấm nhiều màu | Chú thích sửa thành "màu theo tuyến"; điểm trễ có viền đỏ + vòng pulse; điểm giao có vùng bấm 9px |
+| Không thấy số thứ tự / hướng tuyến khi chọn | Chọn tuyến: tuyến khác mờ 0.1, tuyến đang chọn hiện số thứ tự 1→2→3 và mũi tên hướng |
+| Bấm điểm giao phải dò bảng khác | **Thẻ nổi trên bản đồ**: cửa hàng, mã đơn, hạn giao, giờ tới, thu hộ, hàng, kèm nút "Chi tiết" |
+| Nhãn địa điểm bị đường kẻ đè | `paint-order: stroke` + viền `--paper-2` 3px cho nhãn quận và tên nút |
+| Nhật ký là danh sách phẳng | Đổi thành **timeline dọc**: đường kẻ, chấm màu theo bước, pill màu (xanh dương nhận biết, cam hành động, xanh lá kiểm tra), **thời gian thật** `+14 ms` đo trong tác tử |
+| Bảng luật chỉ để đọc | Thêm lọc `Tất cả (6) / Chặn (3) / Cảnh báo (3)`; bấm một vi phạm thì bản đồ **zoom vào đúng điểm** và mở chi tiết đơn |
+| Số liệu không thẳng cột | Toàn bộ số dùng `font-variant-numeric: tabular-nums` (font mono sẵn có) |
+| Rail không có nhãn | Thêm tooltip khi rê chuột (`data-label`), vẫn giữ `aria-label` cho trình đọc màn hình |
+| Bản đồ bị hộp thư | `fitView()` tính `viewBox` theo tỉ lệ khung chứa (đã làm ở v4) |
+
+Ghi chú kỹ thuật: `pointerdown` không còn `setPointerCapture` ngay — chỉ giữ chuột khi đã kéo quá 6px,
+nếu không thì cú click bị chuyển sang thẻ `<svg>` và thẻ nổi không bao giờ mở.
+
+Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-cau-hinh.png`, `giao-dien-the-noi.png`, `giao-dien-su-co.png`.

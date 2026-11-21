@@ -13,16 +13,16 @@
   <aside class="rail">
     <div class="mark" aria-hidden="true">D</div>
     <nav class="rail-nav" aria-label="Khu vực chính">
-      <button class="rail-btn is-active" data-view="dispatch" aria-label="Bảng điều phối" title="Bảng điều phối">
+      <button class="rail-btn is-active" data-view="dispatch" data-label="Điều phối" aria-label="Bảng điều phối">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
       </button>
-      <button class="rail-btn" data-view="rules" aria-label="Cơ sở tri thức" title="Cơ sở tri thức">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
-      </button>
-      <button class="rail-btn" data-view="orders" aria-label="Danh sách đơn" title="Danh sách đơn">
+      <button class="rail-btn" data-view="orders" data-label="Danh sách đơn" aria-label="Danh sách đơn">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h10v2H4v-2Z"/></svg>
       </button>
-      <button class="rail-btn" data-view="compare" aria-label="So sánh chiến lược" title="So sánh chiến lược">
+      <button class="rail-btn" data-view="rules" data-label="Cơ sở tri thức" aria-label="Cơ sở tri thức">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
+      </button>
+      <button class="rail-btn" data-view="compare" data-label="So sánh chiến lược" aria-label="So sánh chiến lược">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4V10H4v10Zm6 0h4V4h-4v16Zm6 0h4v-7h-4v7Z"/></svg>
       </button>
     </nav>
@@ -41,33 +41,48 @@
         <span class="dot" aria-hidden="true"></span>
         <span class="shift-label">Ca sáng</span>
         <span class="mono shift-hours">08:00 – 12:00</span>
-        <span class="sep" aria-hidden="true"></span>
-        <span id="scenario-meta" class="mono">—</span>
       </div>
 
       <div class="controls">
-        <label class="field">
-          <span>Seed</span>
-          <input id="seed" type="number" value="7" min="1" max="999" aria-label="Hạt giống kịch bản" />
-        </label>
-        <label class="field">
-          <span>Đơn</span>
-          <select id="orders" aria-label="Số đơn trong ca">
-            <option value="48">48</option>
-            <option value="96">96</option>
-            <option value="144">144</option>
-          </select>
-        </label>
-        <label class="field field-check">
-          <input id="use-ml" type="checkbox" />
-          <span id="eta-label">ETA mô hình</span>
-        </label>
+        <div class="config-wrap">
+          <button id="config-btn" class="btn btn-quiet" aria-expanded="false" aria-controls="config-pop">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm8.4 4.9.1-.9-.1-.9 2-1.6-1.9-3.3-2.4 1a7.6 7.6 0 0 0-1.6-.9l-.4-2.6h-3.8l-.4 2.6c-.6.2-1.1.5-1.6.9l-2.4-1L3.9 11.4l2 1.6-.1.9.1.9-2 1.6 1.9 3.3 2.4-1c.5.4 1 .7 1.6.9l.4 2.6h3.8l.4-2.6c.6-.2 1.1-.5 1.6-.9l2.4 1 1.9-3.3-2-1.6Z"/></svg>
+            Cấu hình giả lập <span class="caret" aria-hidden="true">▾</span>
+          </button>
+          <div id="config-pop" class="popover" hidden>
+            <div class="pop-row">
+              <label for="seed">Seed</label>
+              <input id="seed" type="number" value="7" min="1" max="999" />
+            </div>
+            <div class="pop-row">
+              <label for="orders">Số đơn</label>
+              <select id="orders">
+                <option value="48">48</option>
+                <option value="96">96</option>
+                <option value="144">144</option>
+              </select>
+            </div>
+            <label class="pop-check">
+              <input id="use-ml" type="checkbox" />
+              <span id="eta-label">ETA mô hình</span>
+            </label>
+            <p class="pop-note" id="scenario-meta">—</p>
+          </div>
+        </div>
         <button id="plan-btn" class="btn btn-primary">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
           <span class="btn-text">Lập kế hoạch</span>
         </button>
       </div>
     </header>
+
+    <section class="kpi-strip" id="kpis" aria-label="Chỉ số ca làm việc">
+      <div class="kpi"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
+      <div class="kpi"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
+      <div class="kpi"><span class="kpi-label">Đơn trễ</span><span class="kpi-value" id="kpi-late">—</span></div>
+      <div class="kpi"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
+      <div class="kpi-note" id="kpi-note">Bấm “Lập kế hoạch” để chạy tác tử</div>
+    </section>
 
     <main class="workspace">
 
@@ -112,20 +127,13 @@
         <div class="map-legend">
           <span><i class="swatch sw-depot"></i>Kho / cảng</span>
           <span><i class="swatch sw-hub"></i>Bưu cục</span>
-          <span><i class="swatch sw-stop"></i>Điểm giao</span>
-          <span><i class="swatch sw-late"></i>Trễ hẹn</span>
+          <span><i class="swatch sw-stop"></i>Điểm giao — màu theo tuyến</span>
+          <span><i class="swatch sw-late"></i>Trễ hẹn — viền đỏ</span>
           <span class="hint" id="map-hint">Bấm “Lập kế hoạch” để chạy tác tử</span>
         </div>
       </section>
 
       <aside class="panel side-panel">
-        <div class="kpi-grid" id="kpis">
-          <div class="kpi"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
-          <div class="kpi"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
-          <div class="kpi"><span class="kpi-label">Đơn trễ</span><span class="kpi-value" id="kpi-late">—</span></div>
-          <div class="kpi"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
-        </div>
-
         <div class="side-head">
           <h2>Tuyến theo tài xế</h2>
           <span id="route-count" class="pill">0 tuyến</span>
@@ -135,10 +143,19 @@
           <p class="empty">Chưa có kế hoạch. Bấm <b>Lập kế hoạch</b> ở góc trên.</p>
         </div>
 
-        <div class="side-actions">
-          <button id="incident-breakdown" class="btn btn-ghost incident" disabled>Xe hỏng</button>
-          <button id="incident-congestion" class="btn btn-ghost incident" disabled>Kẹt xe</button>
-          <button id="incident-depot" class="btn btn-ghost incident" disabled>Kho đóng</button>
+        <div class="side-actions incidents">
+          <button id="incident-breakdown" class="btn incident" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-3 3-1.7-1.3a4 4 0 0 0-5-5L4 17l-1-1 6.5-6.5a4 4 0 0 1 5.2-3.2ZM6 19a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+            Xe hỏng
+          </button>
+          <button id="incident-congestion" class="btn incident" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v3h-2V5h-4v1H8V3ZM6 7h12v6h-2v3h-2v-3H10v3H8v-3H6V7Zm2 2v2h8V9H8Z"/></svg>
+            Kẹt xe
+          </button>
+          <button id="incident-depot" class="btn incident" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v3h-2V6h-4v3H7v9H5V6a2 2 0 0 1 2-2Zm2 7h6v3H9v-3Zm8 3h2v3h3v2h-3v3h-2v-3h-3v-2h3v-3Z"/></svg>
+            Kho đóng
+          </button>
         </div>
         <div id="incident-strip" class="incident-strip" hidden></div>
         <div class="side-actions">
@@ -161,7 +178,15 @@
         <div id="gantt" class="gantt" hidden></div>
       </div>
       <div class="log-col">
-        <div class="panel-head"><h2>Đối chiếu cơ sở luật</h2><span id="violations-meta" class="pill">—</span></div>
+        <div class="panel-head">
+          <h2>Đối chiếu cơ sở luật</h2>
+          <div class="tabs" id="rule-filters" role="group" aria-label="Lọc mức luật">
+            <button class="tab is-active" data-filter="all">Tất cả</button>
+            <button class="tab" data-filter="chan">Chặn</button>
+            <button class="tab" data-filter="canh_bao">Cảnh báo</button>
+          </div>
+          <span id="violations-meta" class="pill">—</span>
+        </div>
         <div id="violations" class="violations"><p class="empty">Chưa chạy.</p></div>
       </div>
     </footer>
@@ -191,6 +216,3 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
-
-
-

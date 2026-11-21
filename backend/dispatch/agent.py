@@ -11,6 +11,7 @@ các xe còn lại và toàn bộ tuyến được lập lại.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 from .assignment import STRATEGIES, _load, repair_capacity
@@ -25,9 +26,11 @@ class Step:
     stage: str          # perceive | decide | act | verify
     title: str
     detail: str
+    ms: int = 0         # mili-giây kể từ lúc bắt đầu lập kế hoạch
 
     def as_dict(self) -> dict:
-        return {"index": self.index, "stage": self.stage, "title": self.title, "detail": self.detail}
+        return {"index": self.index, "stage": self.stage, "title": self.title,
+                "detail": self.detail, "ms": self.ms}
 
 
 class DispatcherAgent:
@@ -51,10 +54,12 @@ class DispatcherAgent:
         self.time_multiplier = 1.0
         self.rules = RuleEngine()
         self.steps: list[Step] = []
+        self._t0: float | None = None
 
     # -- tiện ích -------------------------------------------------------
     def _log(self, stage: str, title: str, detail: str) -> None:
-        self.steps.append(Step(len(self.steps) + 1, stage, title, detail))
+        elapsed = int((time.perf_counter() - self._t0) * 1000) if self._t0 else 0
+        self.steps.append(Step(len(self.steps) + 1, stage, title, detail, elapsed))
 
     def _orders_by_id(self) -> dict[str, dict]:
         return {o["id"]: o for o in self.orders}
@@ -72,6 +77,7 @@ class DispatcherAgent:
     # -- chu trình chính -------------------------------------------------
     def plan(self) -> dict:
         self.steps.clear()
+        self._t0 = time.perf_counter()
         self._log("perceive", "Nhận lô đơn",
                   f"{len(self.orders)} đơn, {len(self.vehicles)} xe, ca bắt đầu 08:00. "
                   f"Tổng khối lượng {sum(o['weight_kg'] for o in self.orders):.0f} kg.")
@@ -216,6 +222,7 @@ class DispatcherAgent:
 
     def _replan_after_removal(self) -> dict:
         """Chia lại đơn theo năng lực còn lại rồi lập lại toàn bộ tuyến."""
+        self._t0 = time.perf_counter()
         assign_fn = STRATEGIES[self.assignment_strategy]
         assignment = assign_fn(self.net, self.orders, self.vehicles)
         assignment, routes, moves = self._plan(assignment)
@@ -234,5 +241,6 @@ class DispatcherAgent:
             "steps": [s.as_dict() for s in self.steps],
             "strategy": {"assignment": self.assignment_strategy, "routing": self.routing_strategy, "eta": "ml" if self.eta_model else "osrm"},
         }
+
 
 
