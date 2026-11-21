@@ -211,3 +211,24 @@ Ghi chú kỹ thuật: `pointerdown` không còn `setPointerCapture` ngay — ch
 nếu không thì cú click bị chuyển sang thẻ `<svg>` và thẻ nổi không bao giờ mở.
 
 Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-cau-hinh.png`, `giao-dien-the-noi.png`, `giao-dien-su-co.png`.
+
+## 12. Bản v6 — sửa 6 tiểu tiết, 4 lỗi và 2 điểm nhấn
+
+| Góp ý | Cách xử lý |
+|---|---|
+| Bản đồ co cụm giữa khoảng trắng | Lưới nền đổi từ 10×8 đường cố định sang **pattern phủ toàn khung nhìn**, nên khi zoom/kéo không còn mảng trắng; mức fit mặc định tăng 1,08× và nhãn luôn hiển thị `1,0×` |
+| Bảng đơn cắt đuôi biển số, có thanh cuộn ngang | Drawer rộng 880px, cỡ chữ bảng 11px, padding hẹp lại → `scrollWidth = clientWidth`, không phải kéo ngang; cột trạng thái bọc badge xanh/đỏ/xám |
+| Hai dòng R04 trùng nhau | Dòng mô tả phụ thêm **mã đơn · cửa hàng**, nên hai đơn khác nhau hiện rõ khác nhau |
+| Cột `đầu → còn` một màu | Thêm 3 mức màu: `0 → 0` xám nhạt, `x → 0` xanh lá (tác tử dọn sạch), `x → x` vàng cam; mã luật sắp tăng dần trong mỗi nhóm (R01, R02, R03, R08, R12) |
+| Thuật ngữ lẫn `hungarian` / `Hungary` | Thống nhất "Hungarian" ở cả nhật ký và bảng so sánh; bảng so sánh thêm pill **Đang dùng** và tô đỏ ô số xấu (trễ, quá tải) |
+| Scrollbar dày, footer lặp số liệu | Scrollbar mảnh 6px; bỏ hẳn cụm `48 điểm giao · 446,5 phút` ở chân bản đồ (đã có ở dải KPI) |
+| **Lỗi** lệch delta (160→176 nhưng +15) | Tính chênh lệch trên số **đã làm tròn** hiển thị: 176 − 160 = 16 |
+| **Lỗi** số phút ở đáy bản đồ không cập nhật | Xoá cụm đó; số phút chỉ còn ở `kpi-note` và luôn lấy từ metrics mới |
+| **Lỗi** danh sách tuyến bị ép khi bật sự cố | Dải so sánh rời khỏi cột phải, thành **băng ngang full-width** dưới dải KPI, cột tài xế giữ nguyên chiều cao |
+| **Lỗi** icon rail kẹt sau khi đóng modal | `closeModal()` trả trạng thái active về mục Điều phối (Esc, nút ×, bấm nền đều đi qua hàm này) |
+| Nhãn `12:00` bị cắt | Bề rộng chart trừ 46px và nhãn cuối neo `text-anchor="end"` |
+| Chưa thấy sự cố nằm ở đâu | **Marker đỏ nhấp nháy + nhãn** `XE HỎNG` / `KHO ĐÓNG` / `KẸT XE` đặt đúng toạ độ, vẽ lại theo kế hoạch mới |
+| Highlight Gantt chưa đồng bộ | Hàng của tuyến đang chọn được tô nền cam nhạt, khớp với thẻ tuyến bên phải |
+
+Phát hiện thêm khi làm: bộ phím tắt (`/`, `F`, `0`, `+`, `-`, `Esc`) trước đó **chưa từng hoạt động** vì
+handler cũ bị ghi đè — nay đã chạy đúng và `Esc` cũng đóng drawer/modal đúng thứ tự.

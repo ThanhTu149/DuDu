@@ -832,3 +832,62 @@ table.rules th:last-child { white-space: nowrap; width: 92px; }
 .map-card .mc-close { position: absolute; top: 6px; right: 8px; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 15px; }
 .stop-hit { fill: transparent; cursor: pointer; }
 .stop-dot { pointer-events: none; }
+
+/* ============ v6: thanh sự cố nổi, scrollbar mảnh, bảng đơn rộng ============ */
+
+.incident-strip {
+  position: absolute; left: 50%; bottom: 54px; transform: translateX(-50%);
+  width: min(780px, calc(100% - 44px)); z-index: 7;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--line-soft); border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; box-shadow: 0 14px 34px rgba(21,23,28,.16);
+}
+.incident-strip[hidden] { display: none; }
+.incident-strip-head { grid-column: 1 / -1; background: var(--paper-2); border-bottom: 1px solid var(--line-soft); }
+.incident-cell { background: #fdf6f0; }
+
+/* scrollbar mảnh */
+* { scrollbar-width: thin; scrollbar-color: #cfc7b8 transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #d5cec1; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #c2b9a8; }
+
+/* bảng đơn: rộng hơn, chữ nhỏ hơn, badge trạng thái */
+.drawer.wide { width: 880px; max-width: 96vw; }
+.orders-table { font-size: 11px; }
+.orders-table th, .orders-table td { padding: 6px 7px; }
+.orders-table .num { padding-right: 10px; }
+.badge-ok { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: var(--teal-soft); color: var(--teal); }
+.badge-late { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: var(--alert-soft); color: var(--alert); }
+.badge-none { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: #ece7dd; color: var(--ink-3); }
+
+/* gantt: chừa chỗ cho nhãn giờ cuối */
+.gantt { padding-right: 20px; }
+.gantt .g-row { fill: transparent; }
+.gantt .g-row.is-active { fill: rgba(201,73,14,.06); }
+
+/* cột đầu → còn trong modal luật */
+.rules .num.done { color: var(--teal); font-weight: 700; }
+.rules .num.same { color: #8a6100; }
+.rules .num.zero { color: #bcb4a8; }
+
+/* nhãn "đang dùng" ở bảng so sánh + ô xấu */
+.pill-now { font-size: 9.5px; padding: 1px 6px; border-radius: 20px; background: var(--accent); color: #fff; margin-left: 6px; }
+table.cmp td.bad { color: var(--alert); font-weight: 600; }
+.inc-pulse { fill: rgba(179,38,30,.14); stroke: #b3261e; stroke-width: 1; animation: incpulse 1.8s ease-out infinite; }
+@keyframes incpulse { 0% { r: 5; opacity: .95; } 70% { r: 20; opacity: 0; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .inc-pulse { animation: none; opacity: .5; } }
+.inc-label { font-size: 20px; font-weight: 700; letter-spacing: .08em; fill: #b3261e; paint-order: stroke; stroke: rgba(250,248,244,.92); stroke-width: 5px; }
+
+/* dải sự cố full-width ngay dưới KPI */
+.status-zone { min-width: 0; }
+.incident-bar {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--line-soft); border-bottom: 1px solid var(--line);
+}
+.incident-bar[hidden] { display: none; }
+.incident-bar .incident-strip-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 6px 18px; background: var(--paper-2); font-size: 11px; color: var(--ink-3); }
+.incident-bar .incident-cell { background: #fdf6f0; padding: 7px 18px; }
+
+

@@ -19,6 +19,13 @@ from .network import Network
 from .routing import BASE_MINUTE, plan_routes, summarize
 from .rules import RuleEngine
 
+ASSIGNMENT_LABEL = {
+    "hungarian": "Hungarian",
+    "greedy": "tham lam",
+    "savings": "Clarke–Wright",
+    "random": "chia vòng tròn",
+}
+
 
 @dataclass
 class Step:
@@ -84,7 +91,7 @@ class DispatcherAgent:
 
         assign_fn = STRATEGIES[self.assignment_strategy]
         assignment = assign_fn(self.net, self.orders, self.vehicles)
-        self._log("decide", f"Chia đơn bằng {self.assignment_strategy}",
+        self._log("decide", f"Chia đơn bằng {ASSIGNMENT_LABEL.get(self.assignment_strategy, self.assignment_strategy)}",
                   f"{sum(1 for v in assignment.values() if v)} xe có đơn, "
                   f"tải lớn nhất {max((_load(v)[0] for v in assignment.values()), default=0):.0f} kg.")
 
@@ -241,6 +248,7 @@ class DispatcherAgent:
             "steps": [s.as_dict() for s in self.steps],
             "strategy": {"assignment": self.assignment_strategy, "routing": self.routing_strategy, "eta": "ml" if self.eta_model else "osrm"},
         }
+
 
 
 

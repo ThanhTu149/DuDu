@@ -76,6 +76,7 @@
       </div>
     </header>
 
+    <div class="status-zone">
     <section class="kpi-strip" id="kpis" aria-label="Chỉ số ca làm việc">
       <div class="kpi"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
       <div class="kpi"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
@@ -83,6 +84,8 @@
       <div class="kpi"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
       <div class="kpi-note" id="kpi-note">Bấm “Lập kế hoạch” để chạy tác tử</div>
     </section>
+    <section id="incident-strip" class="incident-bar" hidden aria-label="So sánh trước và sau sự cố"></section>
+    </div>
 
     <main class="workspace">
 
@@ -129,7 +132,7 @@
           <span><i class="swatch sw-hub"></i>Bưu cục</span>
           <span><i class="swatch sw-stop"></i>Điểm giao — màu theo tuyến</span>
           <span><i class="swatch sw-late"></i>Trễ hẹn — viền đỏ</span>
-          <span class="hint" id="map-hint">Bấm “Lập kế hoạch” để chạy tác tử</span>
+          
         </div>
       </section>
 
@@ -157,7 +160,6 @@
             Kho đóng
           </button>
         </div>
-        <div id="incident-strip" class="incident-strip" hidden></div>
         <div class="side-actions">
           <button id="compare-btn" class="btn btn-ghost">So sánh chiến lược</button>
         </div>
@@ -216,3 +218,5 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
+

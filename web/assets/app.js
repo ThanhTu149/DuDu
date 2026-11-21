@@ -74,6 +74,9 @@ function fitView() {
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
+  const zoom = 1.08;
+  w /= zoom;
+  h /= zoom;
   state.view = { x: cx - w / 2, y: cy - h / 2, w, h };
   state.fitW = w;
   applyView();
@@ -182,14 +185,13 @@ function drawBase() {
   defs.appendChild(marker);
   svg.appendChild(defs);
 
-  for (let i = 1; i < 8; i += 1) {
-    const y = PAD + ((H - 2 * PAD) / 8) * i;
-    svg.appendChild(el("line", { x1: PAD, x2: W - PAD, y1: y, y2: y, class: "grid-line" }));
-  }
-  for (let i = 1; i < 10; i += 1) {
-    const x = PAD + ((W - 2 * PAD) / 10) * i;
-    svg.appendChild(el("line", { x1: x, x2: x, y1: PAD, y2: H - PAD, class: "grid-line" }));
-  }
+  // lưới phủ toàn khung nhìn (không chỉ vùng 1000×640) để khi zoom/kéo không lộ nền trống
+  const pattern = el("pattern", { id: "grid-pattern", width: "80", height: "80", patternUnits: "userSpaceOnUse" });
+  pattern.appendChild(el("path", { d: "M80 0H0V80", fill: "none", stroke: "#e7e1d6", "stroke-width": "1" }));
+  defs.appendChild(pattern);
+  svg.appendChild(el("rect", {
+    x: -4000, y: -3000, width: 11000, height: 9000, fill: "url(#grid-pattern)", "pointer-events": "none",
+  }));
 
   // vùng đô thị (bao lồi của các nút) để bản đồ có bối cảnh
   const points = state.hubs.map((hub) => project(hub.lat, hub.lon)).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
@@ -402,8 +404,38 @@ function drawRoutes() {
   });
   svg.appendChild(dots);
 
+  if (state.incident?.kind) drawIncidentMarker(svg);
+
   if (!state.geometryDone) refineGeometry();
   applySearch();
+}
+
+function drawIncidentMarker(svg) {
+  svg.querySelectorAll(".incident-marker").forEach((node) => node.remove());
+  let point = null;
+  let label = "SỰ CỐ";
+  if (state.incident.kind === "breakdown") {
+    const vehicle = state.vehiclesById[state.incident.vehicle_id];
+    const hub = vehicle && state.hubs.find((item) => item.id === vehicle.start_hub);
+    if (hub) { point = project(hub.lat, hub.lon); label = "XE HỎNG"; }
+  } else if (state.incident.kind === "depot_closed") {
+    const hub = state.hubs.find((item) => item.id === state.incident.hub_id);
+    if (hub) { point = project(hub.lat, hub.lon); label = "KHO ĐÓNG"; }
+  } else {
+    const lat = state.hubs.reduce((sum, hub) => sum + hub.lat, 0) / state.hubs.length;
+    const lon = state.hubs.reduce((sum, hub) => sum + hub.lon, 0) / state.hubs.length;
+    point = project(lat, lon);
+    label = "KẸT XE";
+  }
+  if (!point) return;
+  const layer = el("g", { class: "incident-marker" });
+  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 34, class: "inc-pulse" }));
+  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 24, fill: "none", stroke: "#b3261e", "stroke-width": 3, opacity: ".85" }));
+  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 14, fill: "#b3261e", stroke: "#fff", "stroke-width": 4 }));
+  const text = el("text", { x: point[0] + 30, y: point[1] + 6, class: "inc-label" });
+  text.textContent = label;
+  layer.appendChild(text);
+  svg.appendChild(layer);
 }
 
 function refineGeometry() {
@@ -493,6 +525,9 @@ function setActiveRoute(vehicleId, reset = false) {
   });
   document.querySelectorAll(".stop-num").forEach((label) => {
     label.classList.toggle("is-on", Boolean(active) && label.dataset.vehicle === active);
+  });
+  document.querySelectorAll(".g-row").forEach((row) => {
+    row.classList.toggle("is-active", row.dataset.vehicle === active);
   });
 }
 
@@ -626,11 +661,15 @@ function renderViolations(violations, initial) {
     ? violations
     : violations.filter((violation) => violation.level === violationFilter);
   box.innerHTML = shown.length ? shown
-    .map((violation) => `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" title="Bấm để xem trên bản đồ">
+    .map((violation) => {
+      const order = state.ordersById[violation.order_id];
+      const who = order ? `${order.code} · ${order.shop}` : "";
+      return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" title="Bấm để xem trên bản đồ">
         <span class="v-id">${violation.rule_id}</span>
-        <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}</span></span>
+        <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}${who ? ` · ${who}` : ""}</span></span>
         <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
-      </div>`)
+      </div>`;
+    })
     .join("") : '<p class="empty">Không có vi phạm ở mức này.</p>';
 
   document.querySelectorAll(".violation[data-order]").forEach((row) => {
@@ -662,12 +701,14 @@ function renderIncidentStrip(result) {
   if (!before) return;
   const strip = $("#incident-strip");
   const cell = (label, before_, after_, unit, digits = 0) => {
-    const diff = after_ - before_;
+    const roundedBefore = Math.round(before_ * (digits ? 10 : 1)) / (digits ? 10 : 1);
+    const roundedAfter = Math.round(after_ * (digits ? 10 : 1)) / (digits ? 10 : 1);
+    const diff = roundedAfter - roundedBefore;
     const cls = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
     const arrow = Math.abs(diff) < 0.05 ? "±" : diff > 0 ? "+" : "−";
     return `<div class="incident-cell">
-      <span>${label} · trước ${viNum(before_, digits)}${unit}</span>
-      <b>${viNum(after_, digits)}${unit}</b>
+      <span>${label} · trước ${viNum(roundedBefore, digits)}${unit}</span>
+      <b>${viNum(roundedAfter, digits)}${unit}</b>
       <span class="pill-delta ${cls}">${arrow}${viNum(Math.abs(diff), digits)}${unit}</span>
     </div>`;
   };
@@ -682,6 +723,12 @@ function renderIncidentStrip(result) {
     ${cell("Đơn trễ", before.late_count, after.late_count, "")}
     ${cell("Vi phạm chặn", before.blocked ?? 0, after.blocked ?? 0, "")}`;
   strip.hidden = false;
+  state.incident = {
+    kind: result.incident?.kind,
+    vehicle_id: result.incident?.vehicle_id,
+    hub_id: result.incident?.hub_id,
+  };
+  if (state.plan) drawRoutes();
   $("#incident-undo")?.addEventListener("click", () => runPlan());
   markIncident(result.incident?.kind);
 }
@@ -694,6 +741,7 @@ function markIncident(kind) {
   if (!kind) {
     document.querySelectorAll(".incident").forEach((button) => button.classList.remove("is-active"));
     $("#incident-strip").hidden = true;
+    state.incident = null;
   }
 }
 
@@ -908,7 +956,9 @@ function openOrders() {
         <td class="num">${fmt1(row.weight)}</td>
         <td class="num">${clockLabel(row.due)}</td>
         <td class="num">${row.arrive == null ? "—" : clockLabel(row.arrive)}</td>
-        <td>${row.status === "trễ" ? '<span class="tag-late">trễ</span>' : row.status}</td>
+        <td>${row.status === "trễ" ? '<span class="badge-late">trễ</span>'
+          : row.status === "đúng" ? '<span class="badge-ok">đúng</span>'
+          : '<span class="badge-none">chưa xếp</span>'}</td>
         <td class="mono">${row.driver}</td>
       </tr>`).join("") : '<tr><td colspan="9" class="orders-empty">Không có đơn nào khớp bộ lọc.</td></tr>';
 
@@ -955,7 +1005,7 @@ function renderGantt() {
   const routes = state.plan.routes.filter((route) => route.stops.length);
   const start = 8 * 60;
   const end = Math.max(12 * 60, ...routes.map((route) => lastArrival(route)));
-  const width = Math.max(560, (box.clientWidth || 640) - 32);
+  const width = Math.max(560, (box.clientWidth || 640) - 46);
   const left = 88;
   const top = 30;
   const rowHeight = 24;
@@ -964,13 +1014,15 @@ function renderGantt() {
   const parts = [];
 
   for (let minute = Math.ceil(start / 60) * 60; minute <= end; minute += 60) {
+    const edge = minute >= end ? -2 : 0;
     parts.push(`<line class="g-grid" x1="${x(minute).toFixed(1)}" y1="${top - 8}" x2="${x(minute).toFixed(1)}" y2="${height - 8}"/>`);
-    parts.push(`<text class="g-tick" x="${x(minute).toFixed(1)}" y="14" text-anchor="middle">${clockLabel(minute)}</text>`);
+    parts.push(`<text class="g-tick" x="${(x(minute) + edge).toFixed(1)}" y="14" text-anchor="${minute >= end ? "end" : "middle"}">${clockLabel(minute)}</text>`);
   }
 
   routes.forEach((route, index) => {
     const y = top + index * rowHeight;
     const color = ROUTE_COLORS[state.plan.routes.indexOf(route) % ROUTE_COLORS.length];
+    parts.push(`<rect class="g-row${route.vehicle_id === state.activeVehicle ? " is-active" : ""}" data-vehicle="${route.vehicle_id}" x="0" y="${y}" width="${width}" height="${rowHeight}" fill="transparent"/>`);
     parts.push(`<text class="g-label" x="0" y="${y + 13}">${route.plate}</text>`);
     parts.push(`<rect x="${left}" y="${y + 3}" width="${(width - left - 12).toFixed(1)}" height="16" fill="#f1ece1" rx="3" opacity="0.55"/>`);
     for (const stop of route.stops) {
@@ -1071,7 +1123,7 @@ function paintPlan(plan) {
   $("#export-btn").disabled = false;
   $("#print-btn").disabled = false;
   document.querySelectorAll(".incident").forEach((button) => { button.disabled = false; });
-  $("#map-hint").textContent = `${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
+  $("#kpi-note").textContent = `${plan.metrics.vehicles_used} xe · ${plan.metrics.orders} điểm giao · ${fmt1(plan.metrics.total_min)} phút xe chạy`;
 }
 
 async function runPlan() {
@@ -1177,15 +1229,20 @@ async function openRules() {
     .map(([level, title]) => {
       const group = rules.filter((rule) => rule.level === level);
       if (!group.length) return "";
-      const rows = group
+      const rows = [...group]
+        .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
         .map((rule) => {
           const before = countOf(initial, rule.id);
           const after = countOf(left, rule.id);
           const num = state.plan ? `${before} → ${after}` : "—";
+          const cls = !state.plan ? ""
+            : before === 0 && after === 0 ? "zero"
+            : after === 0 ? "done"
+            : "same";
           return `<tr>
             <td>${rule.id}</td>
             <td><span class="rule-title">${rule.title}</span><span class="rule-clause">${rule.clause}</span></td>
-            <td class="num">${num}</td>
+            <td class="num ${cls}">${num}</td>
           </tr>`;
         })
         .join("");
@@ -1213,11 +1270,12 @@ async function openCompare() {
   const assignmentHtml = table(
     ["Chiến lược", "km", "phút", "trễ", "quá tải"],
     data.assignment.map((row) => [
-      strategyLabel(row.strategy),
+      strategyLabel(row.strategy) + (row.strategy === state.plan?.strategy?.assignment
+        ? '<span class="pill-now">Đang dùng</span>' : ""),
       fmt1(row.total_km),
       fmt1(row.total_min),
-      String(row.late_count),
-      String(row.over_capacity_routes),
+      row.late_count > 0 ? `<span class="bad">${row.late_count}</span>` : "0",
+      row.over_capacity_routes > 0 ? `<span class="bad">${row.over_capacity_routes}</span>` : "0",
     ]),
     data.assignment.indexOf(best(data.assignment, "total_km")),
   );
@@ -1269,6 +1327,17 @@ function setCompact(on) {
   }
   localStorage.setItem("dudu:compact", on ? "1" : "0");
   if (!document.fullscreenElement) setTimeout(fitView, 80);
+}
+
+function setRailActive(view) {
+  document.querySelectorAll(".rail-btn").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.view === view);
+  });
+}
+
+function closeModal() {
+  $("#modal").hidden = true;
+  setRailActive("dispatch");
 }
 
 /* ---------------------------------------------------------------- boot */
@@ -1348,7 +1417,7 @@ async function loadEtaInfo() {
       if (button.dataset.view === "rules") openRules();
       if (button.dataset.view === "orders") openOrders();
       if (button.dataset.view === "compare") openCompare();
-      if (button.dataset.view === "dispatch") { $("#modal").hidden = true; closeDrawer(); }
+      if (button.dataset.view === "dispatch") { closeModal(); closeDrawer(); }
     });
   });
 
@@ -1365,12 +1434,30 @@ async function loadEtaInfo() {
   });
 
   $("#drawer-close").addEventListener("click", closeDrawer);
-  $("#modal-close").addEventListener("click", () => { $("#modal").hidden = true; });
-  $("#modal").addEventListener("click", (event) => { if (event.target.id === "modal") $("#modal").hidden = true; });
+  $("#modal-close").addEventListener("click", closeModal);
+  $("#modal").addEventListener("click", (event) => { if (event.target.id === "modal") closeModal(); });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") { $("#modal").hidden = true; closeDrawer(); }
+    const typing = event.target.matches("input, select, textarea");
+    if (event.key === "Escape") {
+      if (typing) { event.target.blur(); return; }
+      closeModal();
+      closeDrawer();
+      return;
+    }
+    if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key === "/") { event.preventDefault(); $("#search").focus(); }
+    else if (event.key === "f" || event.key === "F") toggleFullscreen();
+    else if (event.key === "0") fitView();
+    else if (event.key === "+" || event.key === "=") zoomAt(0.8);
+    else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
+
+
+
+
+
 
 
 
