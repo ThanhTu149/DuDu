@@ -59,7 +59,7 @@ python -m uvicorn backend.app:app --reload --port 8000
 Repo dùng commit theo từng bước công việc nhỏ, chia theo mảng để lịch sử đọc được như nhật
 ký làm việc. Xem `docs/PLAN.md` để biết tiến độ.
 
-Sinh viên thực hiện: Lê Thanh Tú — 049206004778 — Nhóm 14.
+Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 ## Tài liệu
 
