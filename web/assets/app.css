@@ -529,7 +529,8 @@ table.rules th:last-child { white-space: nowrap; width: 92px; }
 
 /* ============ v3: zoom/pan bản đồ, toàn màn hình, thu gọn nhật ký ============ */
 
-.map-wrap { cursor: grab; touch-action: none; }
+.map-wrap { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.map-wrap svg { user-select: none; }
 .map-wrap.is-panning { cursor: grabbing; }
 
 .map-controls {
@@ -575,4 +576,5 @@ table.rules th:last-child { white-space: nowrap; width: 92px; }
 .map-panel:fullscreen .map-wrap { flex: 1; }
 .map-panel:fullscreen .map-controls { top: 16px; right: 16px; }
 @media (max-width: 900px) { .map-controls { top: 8px; right: 8px; } }
+
 
