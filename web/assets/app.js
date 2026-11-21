@@ -51,6 +51,108 @@ function project(lat, lon) {
   return [x, y];
 }
 
+/* ------------------------------------------------------------ khung nhìn */
+function applyView() {
+  if (!state.view) return;
+  const v = state.view;
+  $("#map").setAttribute("viewBox", `${v.x.toFixed(1)} ${v.y.toFixed(1)} ${v.w.toFixed(1)} ${v.h.toFixed(1)}`);
+  const note = $("#map-note");
+  if (note) note.textContent = `zoom ${((state.fitW || v.w) / v.w).toFixed(1)}×`;
+}
+
+function fitView() {
+  if (!state.hubs.length) return;
+  const rect = $(".map-wrap").getBoundingClientRect();
+  const aspect = Math.max(rect.width, 1) / Math.max(rect.height, 1);
+  const points = state.hubs.map((hub) => project(hub.lat, hub.lon));
+  const minX = Math.min(...points.map((p) => p[0])) - 55;
+  const maxX = Math.max(...points.map((p) => p[0])) + 55;
+  const minY = Math.min(...points.map((p) => p[1])) - 45;
+  const maxY = Math.max(...points.map((p) => p[1])) + 45;
+  let w = maxX - minX;
+  let h = maxY - minY;
+  if (w / h < aspect) w = h * aspect; else h = w / aspect;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  state.view = { x: cx - w / 2, y: cy - h / 2, w, h };
+  state.fitW = w;
+  applyView();
+}
+
+function zoomAt(factor, clientX, clientY) {
+  if (!state.view) fitView();
+  const v = state.view;
+  const rect = $("#map").getBoundingClientRect();
+  const fx = clientX == null ? 0.5 : Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  const fy = clientY == null ? 0.5 : Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
+  const w = Math.min(2200, Math.max(120, v.w * factor));
+  const h = Math.min(1400, Math.max(80, v.h * factor));
+  state.view = { x: v.x + (v.w - w) * fx, y: v.y + (v.h - h) * fy, w, h };
+  applyView();
+}
+
+async function toggleFullscreen() {
+  const panel = document.querySelector(".map-panel");
+  try {
+    if (!document.fullscreenElement) await panel.requestFullscreen?.();
+    else await document.exitFullscreen?.();
+  } catch { /* trình duyệt từ chối thì thôi */ }
+}
+
+function initMapControls() {
+  const svg = $("#map");
+  const note = document.createElement("div");
+  note.id = "map-note";
+  note.className = "map-note";
+  $(".map-wrap").appendChild(note);
+
+  $("#zoom-in").addEventListener("click", () => zoomAt(0.8));
+  $("#zoom-out").addEventListener("click", () => zoomAt(1.25));
+  $("#zoom-fit").addEventListener("click", fitView);
+  $("#zoom-full").addEventListener("click", toggleFullscreen);
+
+  svg.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    zoomAt(event.deltaY > 0 ? 1.14 : 0.88, event.clientX, event.clientY);
+  }, { passive: false });
+
+  let drag = null;
+  svg.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    drag = { x: event.clientX, y: event.clientY, view: { ...state.view }, moved: 0 };
+    svg.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const rect = svg.getBoundingClientRect();
+    drag.moved += Math.abs(event.movementX) + Math.abs(event.movementY);
+    if (drag.moved > 6) {
+      state.suppressClick = true;
+      $(".map-wrap").classList.add("is-panning");
+    }
+    state.view = {
+      x: drag.view.x - ((event.clientX - drag.x) * drag.view.w) / rect.width,
+      y: drag.view.y - ((event.clientY - drag.y) * drag.view.h) / rect.height,
+      w: drag.view.w,
+      h: drag.view.h,
+    };
+    applyView();
+  });
+  const stop = () => {
+    drag = null;
+    $(".map-wrap").classList.remove("is-panning");
+    setTimeout(() => { state.suppressClick = false; }, 0);
+  };
+  svg.addEventListener("pointerup", stop);
+  svg.addEventListener("pointercancel", stop);
+
+  window.addEventListener("resize", () => {
+    if (!document.fullscreenElement) fitView();
+  });
+  document.addEventListener("fullscreenchange", () => setTimeout(fitView, 80));
+  fitView();
+}
+
 async function api(path, options) {
   const response = await fetch(path, options);
   if (!response.ok) throw new Error(`${response.status} ${path}`);
@@ -252,7 +354,7 @@ function drawRoutes() {
     group.appendChild(el("path", { d, class: "route-hit" }));
     group.addEventListener("mouseenter", () => setActiveRoute(route.vehicle_id));
     group.addEventListener("mouseleave", () => setActiveRoute(state.activeVehicle, true));
-    group.addEventListener("click", () => openVehicle(route.vehicle_id));
+    group.addEventListener("click", () => { if (!state.suppressClick) openVehicle(route.vehicle_id); });
     layer.appendChild(group);
   });
   svg.appendChild(layer);
@@ -798,6 +900,18 @@ function table(headers, rows, highlightIndex) {
   return `<table class="cmp">${head}${body}</table>`;
 }
 
+function setCompact(on) {
+  const shell = document.querySelector(".shell");
+  shell.classList.toggle("is-compact", on);
+  const button = $("#log-toggle");
+  if (button) {
+    button.textContent = on ? "Mở rộng" : "Thu gọn";
+    button.setAttribute("aria-expanded", String(!on));
+  }
+  localStorage.setItem("dudu:compact", on ? "1" : "0");
+  if (!document.fullscreenElement) setTimeout(fitView, 80);
+}
+
 /* ---------------------------------------------------------------- boot */
 async function loadEtaInfo() {
   try {
@@ -848,6 +962,13 @@ async function loadEtaInfo() {
     applySearch();
   });
 
+  initMapControls();
+  const compact = localStorage.getItem("dudu:compact") === "1";
+  setCompact(compact);
+  $("#log-toggle").addEventListener("click", () => {
+    setCompact(!document.querySelector(".shell").classList.contains("is-compact"));
+  });
+
   $("#drawer-close").addEventListener("click", closeDrawer);
   $("#modal-close").addEventListener("click", () => { $("#modal").hidden = true; });
   $("#modal").addEventListener("click", (event) => { if (event.target.id === "modal") $("#modal").hidden = true; });
@@ -855,5 +976,9 @@ async function loadEtaInfo() {
     if (event.key === "Escape") { $("#modal").hidden = true; closeDrawer(); }
   });
 })();
+
+
+
+
 
 

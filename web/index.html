@@ -87,6 +87,20 @@
           <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet" role="img"
                aria-label="Bản đồ 16 nút giao hàng tại TP.HCM và các tuyến xe"></svg>
           <div id="map-tip" class="map-tip" hidden></div>
+          <div class="map-controls" role="group" aria-label="Điều khiển bản đồ">
+            <button id="zoom-in" class="map-btn" aria-label="Phóng to" title="Phóng to (+)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>
+            </button>
+            <button id="zoom-out" class="map-btn" aria-label="Thu nhỏ" title="Thu nhỏ (−)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v2H5z"/></svg>
+            </button>
+            <button id="zoom-fit" class="map-btn" aria-label="Vừa khung" title="Vừa khung (0)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z"/></svg>
+            </button>
+            <button id="zoom-full" class="map-btn" aria-label="Toàn màn hình" title="Toàn màn hình (F)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v2H7v3H5V5Zm9 0h5v5h-2V7h-3V5ZM5 14h2v3h3v2H5v-5Zm12 0h2v5h-5v-2h3v-3Z"/></svg>
+            </button>
+          </div>
         </div>
         <div class="map-legend">
           <span><i class="swatch sw-depot"></i>Kho / cảng</span>
@@ -128,7 +142,10 @@
 
     <footer class="panel log-panel">
       <div class="log-col">
-        <div class="panel-head"><h2>Nhật ký quyết định của tác tử</h2></div>
+        <div class="panel-head">
+          <h2>Nhật ký quyết định của tác tử</h2>
+          <button id="log-toggle" class="btn-quiet log-toggle" aria-expanded="true">Thu gọn</button>
+        </div>
         <ol id="steps" class="steps"><li class="empty">Chưa chạy.</li></ol>
       </div>
       <div class="log-col">
@@ -162,4 +179,5 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
 

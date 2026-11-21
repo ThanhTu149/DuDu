@@ -120,3 +120,28 @@ Bảng breakpoint:
 
 Ảnh cập nhật: `docs/hinh/giao-dien-dieu-phoi.png`, `giao-dien-tuyen.png`, `giao-dien-don.png`,
 `giao-dien-luat.png`, `giao-dien-so-sanh.png`, `giao-dien-su-co.png`.
+
+## 9. Bản v3 — bản đồ tương tác và chế độ xem gọn
+
+Vấn đề của v2: bản đồ bị "hộp thư" (letterbox) trên màn hình rộng — với cửa sổ 1885×847,
+khung SVG 1000×640 chỉ dùng được phần giữa, hai bên trống. Không phóng được, không kéo được.
+
+Đã sửa:
+
+| Thay đổi | Chi tiết |
+|---|---|
+| **Vừa khung theo tỉ lệ cửa sổ** | `fitView()` tính `viewBox` theo đúng tỉ lệ khung chứa và bao trọn 16 nút + lề, nên bản đồ luôn lấp đầy bề ngang |
+| **Phóng / thu** | Nút +, −, lăn chuột (zoom tại vị trí con trỏ), phím `+`/`-`; nhãn `zoom 1,0×` góc dưới phải |
+| **Kéo bản đồ** | Giữ chuột trái và kéo; kéo quá 6px thì bỏ qua cú click để không mở nhầm drawer |
+| **Toàn màn hình** | Nút ⛶ hoặc phím `F` (Fullscreen API), thoát bằng `Esc` |
+| **Thu gọn nhật ký** | Nút "Thu gọn" ở panel dưới: bản đồ được thêm ~190px chiều cao; trạng thái nhớ trong `localStorage` |
+| **Hoàn tác sự cố** | Nút "↺ Kế hoạch gốc" trong dải so sánh sau sự cố |
+| **Phím tắt** | `/` tìm kiếm · `F` toàn màn hình · `0` vừa khung · `+`/`-` phóng · `Esc` đóng |
+| **Trạng thái lỗi** | API không chạy thì hiện màn hình "Không tải được dữ liệu" kèm lệnh chạy lại, không để trang trắng |
+
+Chi tiết kỹ thuật đáng chú ý: các lớp nét (`leg`, `grid-line`, `city-hull`…) đặt
+`vector-effect: non-scaling-stroke` để khi phóng to nét không dày lên; `touch-action: none`
+trên khung bản đồ để kéo không bị trình duyệt cuộn trang.
+
+Ảnh: `docs/hinh/giao-dien-dieu-phoi.png` (vừa khung), `giao-dien-zoom.png` (đã phóng và kéo),
+`giao-dien-gon.png` (chế độ gọn), `giao-dien-tuyen.png` (drawer tuyến).
