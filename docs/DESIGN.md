@@ -164,3 +164,24 @@ Trạng thái tab được nhớ trong phiên: mở "Dòng thời gian" thì pan
 rộng nếu đang ở chế độ gọn.
 
 Ảnh: `giao-dien-don-hang.png`, `giao-dien-gantt.png`, `giao-dien-in.png`.
+
+### Đưa bộ thiết kế vào Figma
+
+**Lưu ý:** File → Import của Figma chỉ nhận `.fig`, `.sketch`, ảnh — **không nhận JSON**.
+Đưa `tokens.json` vào bằng cách đó sẽ báo "Unsupported file format". Có hai đường đúng:
+
+**Đường 1 — plugin Tokens Studio (khuyến nghị, có biến thật)**
+
+1. Figma → menu chính → **Plugins → Manage plugins** → tìm "Tokens Studio for Figma" → Run.
+2. Trong plugin: **Import** → chọn `docs/design-system/tokens.studio.json`
+   (bản này dùng định dạng Tokens Studio: `value`/`type`; bản `tokens.json` là DTCG cho công cụ khác).
+3. Bấm **Create styles/variables** để đẩy thành Figma Variables, rồi dùng trực tiếp trong mọi frame.
+
+**Đường 2 — kéo SVG (không cần plugin, có ngay bản xem)**
+
+1. Mở `docs/design-system/style-sheet.svg`.
+2. Kéo tệp vào canvas Figma (hoặc Ctrl+Shift+K, chọn tệp).
+3. Figma đọc SVG thành **layer vector**: mỗi ô màu, mỗi dòng chữ sửa được; bung nhóm để lấy
+   từng swatch, từng mẫu chữ, từng component (nút, chip biển số, nhãn mức, thẻ KPI).
+
+Ảnh xem trước: `docs/design-system/style-sheet.png`.

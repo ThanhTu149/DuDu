@@ -1,0 +1,72 @@
+{
+  "color": {
+    "paper": { "value": "#f5f2ec", "type": "color", "description": "nền toàn màn hình" },
+    "paper-2": { "value": "#faf8f4", "type": "color", "description": "mặt phẳng panel" },
+    "ink": { "value": "#15171c", "type": "color", "description": "chữ chính, rail" },
+    "ink-2": { "value": "#4d535c", "type": "color" },
+    "ink-3": { "value": "#858b94", "type": "color" },
+    "line": { "value": "#ddd7cb", "type": "color" },
+    "line-soft": { "value": "#e9e4da", "type": "color" },
+    "accent": { "value": "#c9490e", "type": "color", "description": "màu nhấn duy nhất" },
+    "accent-soft": { "value": "#f7e4d8", "type": "color" },
+    "teal": { "value": "#2c6b52", "type": "color" },
+    "teal-soft": { "value": "#dcebe3", "type": "color" },
+    "alert": { "value": "#b3261e", "type": "color" },
+    "alert-soft": { "value": "#f8dfdc", "type": "color" },
+    "amber": { "value": "#d99a06", "type": "color" },
+    "route-1": { "value": "#c9490e", "type": "color" },
+    "route-2": { "value": "#2c6b52", "type": "color" },
+    "route-3": { "value": "#2f5d8c", "type": "color" },
+    "route-4": { "value": "#8a6100", "type": "color" },
+    "route-5": { "value": "#6b3f8c", "type": "color" },
+    "route-6": { "value": "#a3402d", "type": "color" },
+    "route-7": { "value": "#2f7c7c", "type": "color" },
+    "route-8": { "value": "#5c6b2f", "type": "color" }
+  },
+  "font": {
+    "sans": { "value": "Be Vietnam Pro, Segoe UI, system-ui, sans-serif", "type": "fontFamilies" },
+    "mono": { "value": "JetBrains Mono, Consolas, monospace", "type": "fontFamilies" }
+  },
+  "size": {
+    "label": { "value": "10", "type": "fontSizes" },
+    "kicker": { "value": "11", "type": "fontSizes" },
+    "small": { "value": "12", "type": "fontSizes" },
+    "body": { "value": "13", "type": "fontSizes" },
+    "lead": { "value": "14", "type": "fontSizes" },
+    "title": { "value": "17", "type": "fontSizes" },
+    "kpi": { "value": "20", "type": "fontSizes" }
+  },
+  "spacing": {
+    "1": { "value": "4", "type": "spacing" },
+    "2": { "value": "6", "type": "spacing" },
+    "3": { "value": "8", "type": "spacing" },
+    "4": { "value": "10", "type": "spacing" },
+    "5": { "value": "12", "type": "spacing" },
+    "6": { "value": "14", "type": "spacing" },
+    "7": { "value": "16", "type": "spacing" },
+    "8": { "value": "20", "type": "spacing" }
+  },
+  "radius": {
+    "sm": { "value": "4", "type": "borderRadius" },
+    "md": { "value": "7", "type": "borderRadius" },
+    "lg": { "value": "10", "type": "borderRadius" },
+    "pill": { "value": "20", "type": "borderRadius" }
+  },
+  "border": {
+    "hairline": { "value": { "color": "#ddd7cb", "width": "1", "style": "solid" }, "type": "border" }
+  },
+  "shadow": {
+    "panel": { "value": { "color": "#15171c14", "x": "0", "y": "10", "blur": "30", "spread": "0", "type": "dropShadow" }, "type": "boxShadow" }
+  },
+  "breakpoint": {
+    "narrow": { "value": "900", "type": "sizing" },
+    "stack": { "value": "1240", "type": "sizing" },
+    "compactToolbar": { "value": "1460", "type": "sizing" }
+  },
+  "layout": {
+    "railWidth": { "value": "64", "type": "sizing" },
+    "sidePanel": { "value": "400", "type": "sizing" },
+    "drawer": { "value": "400", "type": "sizing" },
+    "drawerWide": { "value": "780", "type": "sizing" }
+  }
+}
