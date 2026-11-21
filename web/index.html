@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DuDu — Điều phối giao hàng nội thành</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+<div class="app">
+
+  <aside class="rail">
+    <div class="mark" title="DuDu">D</div>
+    <nav class="rail-nav">
+      <button class="rail-btn is-active" data-view="dispatch" title="Điều phối">
+        <svg viewBox="0 0 24 24"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
+      </button>
+      <button class="rail-btn" data-view="routes" title="Tuyến">
+        <svg viewBox="0 0 24 24"><path d="M6 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm12 12a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM7.4 7.4l8.2 8.2-1.4 1.4-8.2-8.2 1.4-1.4Z"/></svg>
+      </button>
+      <button class="rail-btn" data-view="rules" title="Cơ sở luật">
+        <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
+      </button>
+    </nav>
+    <div class="rail-foot">BTL AI · UTH</div>
+  </aside>
+
+  <div class="shell">
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-name">DuDu</span>
+        <span class="brand-sub">Điều phối giao hàng nội thành</span>
+      </div>
+
+      <div class="shift">
+        <span class="dot"></span>
+        <span>Ca sáng</span>
+        <span class="mono">08:00 – 12:00</span>
+        <span class="sep"></span>
+        <span id="scenario-meta" class="mono">—</span>
+      </div>
+
+      <div class="controls">
+        <label class="field">
+          <span>Seed</span>
+          <input id="seed" type="number" value="7" min="1" max="999" />
+        </label>
+        <label class="field">
+          <span>Đơn</span>
+          <select id="orders">
+            <option value="48">48</option>
+            <option value="96">96</option>
+            <option value="144">144</option>
+          </select>
+        </label>
+        <label class="field field-check">
+          <input id="use-ml" type="checkbox" />
+          <span id="eta-label">ETA mô hình</span>
+        </label>
+        <button id="plan-btn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          Lập kế hoạch
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+
+      <section class="panel map-panel">
+        <div class="panel-head">
+          <h2>Bản đồ điều phối</h2>
+          <div class="map-tools">
+            <span id="map-hint" class="hint">Bấm “Lập kế hoạch” để chạy tác tử</span>
+          </div>
+        </div>
+        <div class="map-wrap">
+          <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
+          <div id="map-tip" class="map-tip" hidden></div>
+        </div>
+        <div class="map-legend">
+          <span><i class="swatch sw-depot"></i>Kho / cảng</span>
+          <span><i class="swatch sw-hub"></i>Bưu cục</span>
+          <span><i class="swatch sw-stop"></i>Điểm giao</span>
+          <span><i class="swatch sw-late"></i>Trễ hẹn</span>
+        </div>
+      </section>
+
+      <aside class="panel side-panel">
+        <div class="kpi-grid" id="kpis">
+          <div class="kpi"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
+          <div class="kpi"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
+          <div class="kpi"><span class="kpi-label">Đơn trễ</span><span class="kpi-value" id="kpi-late">—</span></div>
+          <div class="kpi"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
+        </div>
+
+        <div class="side-head">
+          <h2>Tuyến theo tài xế</h2>
+          <span id="route-count" class="pill">0 tuyến</span>
+        </div>
+
+        <div id="routes" class="route-list">
+          <p class="empty">Chưa có kế hoạch.</p>
+        </div>
+
+        <div class="side-actions">
+          <button id="incident-breakdown" class="btn btn-ghost incident" disabled>Xe hỏng</button>
+          <button id="incident-congestion" class="btn btn-ghost incident" disabled>Kẹt xe</button>
+          <button id="incident-depot" class="btn btn-ghost incident" disabled>Kho đóng</button>
+        </div>
+        <div id="incident-strip" class="incident-strip" hidden></div>
+        <div class="side-actions">
+          <button id="compare-btn" class="btn btn-ghost">So sánh chiến lược</button>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="panel log-panel">
+      <div class="log-col">
+        <div class="panel-head"><h2>Nhật ký quyết định của tác tử</h2></div>
+        <ol id="steps" class="steps"><li class="empty">Chưa chạy.</li></ol>
+      </div>
+      <div class="log-col">
+        <div class="panel-head"><h2>Đối chiếu cơ sở luật</h2><span id="violations-meta" class="pill">—</span></div>
+        <div id="violations" class="violations"><p class="empty">Chưa chạy.</p></div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-card">
+    <header><h3 id="modal-title">So sánh chiến lược</h3><button id="modal-close" class="btn-close">×</button></header>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>
