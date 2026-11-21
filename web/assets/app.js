@@ -186,7 +186,7 @@ function updateMascotFromPlan() {
     setMascot("Biệt đội đang chờ lệnh — bấm <b>Lập kế hoạch</b> nhé!");
     return;
   }
-  setMascot(`Biệt đội đã tối ưu <b>${metrics.orders} đơn</b> · Đúng giờ ${fmt1(metrics.on_time_rate)}%`);
+  setMascot(`<b>${metrics.orders} đơn</b> tối ưu · Đúng giờ ${fmt1(metrics.on_time_rate)}%`);
 }
 
 const INCIDENT_PENDING = {
@@ -721,10 +721,11 @@ function renderViolations(violations, initial) {
       const who = driverLevel && vehicle
         ? `${vehicle.plate} · ${vehicle.label}`
         : order ? `${order.code} · ${order.shop}` : "";
-      return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" title="Bấm để xem trên bản đồ">
+      return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" role="button" aria-label="Xem trên bản đồ">
         <span class="v-id">${violation.rule_id}</span>
         <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}${who ? ` · ${who}` : ""}</span></span>
         <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+        <span class="v-pin" aria-hidden="true">↗</span>
       </div>`;
     })
     .join("") : '<p class="empty">Không có vi phạm ở mức này.</p>';
@@ -842,6 +843,7 @@ function openOrder(orderId, route, options = {}) {
          <b>${violation.rule_id} — ${violation.title}</b>
          <span>${violation.detail}</span>
          <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+        <span class="v-pin" aria-hidden="true">↗</span>
        </div>`).join("")
     : '<p class="empty" style="margin:0">Không có luật nào kích hoạt trên đơn này.</p>';
 
@@ -1555,6 +1557,7 @@ async function loadEtaInfo() {
     else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
 
 
 

@@ -319,3 +319,13 @@ Banner trước đây chỉ sống trong modal chào mừng; giờ nó thành m�
 Ở màn hình ≤900px, `.app` khai báo `grid-template-columns: 0 1fr` và ẩn rail, nên `.shell` rơi vào cột 0px → toàn bộ nội dung co về 0, nút “Lập kế hoạch” bị KPI đè lên. Đã sửa thành `1fr`, đồng thời đặt lại lưới `.shell` 4 hàng ở cuối tệp CSS để thắng các rule cũ.
 
 Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-su-co.png`, `giao-dien-gioi-thieu.png`.
+
+## 16. Bản v10 — ba tiểu tiết cuối
+
+| Góp ý | Cách sửa |
+|---|---|
+| Ảnh thẻ nổi cắt mất đầu Gấu Nâu và chỏm tóc DuDu | Đổi khung sang `16 / 9.6`, `object-position` và gốc phóng về **`100% 34%`**, scale **1,66** — lộ trọn đầu Gấu Nâu, tóc DuDu, Gấu Trúc và Gấu Trắng; đẩy hẳn chữ “DuDu” của banner ra ngoài khung |
+| Câu trạng thái rớt dòng `97,9%` | Rút còn **“48 đơn tối ưu · Đúng giờ 97,9%”**, cỡ 10,5px, `nowrap` + ellipsis (đo: `scrollWidth = clientWidth = 220`) |
+| Banner trong modal lộ hai dải trắng hai bên | Modal hẹp còn **740px**, ảnh `width: 100%`, bỏ `object-fit: contain`, bo góc trên; nút × tròn mờ tối nổi trên ảnh |
+| Tooltip mặc định của trình duyệt ở bảng luật | Bỏ `title`, thay bằng mũi tên `↗` màu cam hiện dần khi hover, ngăn bằng `aria-label` |
+| Chữ dọc “NHÓM 14” | Đổi thành **“DuDu”** |
