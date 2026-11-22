@@ -401,15 +401,17 @@ table.rules th:last-child { white-space: nowrap; width: 92px; }
 .btn-quiet:hover:not(:disabled) { background: var(--surface); border-color: #cfc7b8; }
 .btn-quiet:disabled { opacity: .4; cursor: not-allowed; }
 
-.btn.is-busy .btn-text::after {
+.btn.is-busy .btn-text::after,
+.btn.incident.is-busy::after {
   content: "";
-  display: inline-block; width: 11px; height: 11px; margin-left: 8px;
-  border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%;
+  display: inline-block; width: 11px; height: 11px; margin-left: 6px;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
   animation: spin .7s linear infinite; vertical-align: -1px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .btn.is-busy .btn-text::after { animation: none; }
+  .btn.is-busy .btn-text::after,
+  .btn.incident.is-busy::after { animation: none; }
 }
 
 .search {
@@ -1358,7 +1360,7 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
   overflow: hidden;
   background: var(--map-bg);
 }
-#map { background: var(--map-bg); }
+#map { background: var(--map-bg); touch-action: none; }
 
 /* 2. cụm nổi trên bản đồ (full-bleed + glassmorphism) */
 .map-float {

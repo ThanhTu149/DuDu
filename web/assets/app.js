@@ -174,36 +174,93 @@ function initMapControls() {
   }, { passive: false });
   svg.addEventListener("click", () => closeMapCard());
 
+  const activePointers = new Map();
   let drag = null;
+  let pinchStart = null;
+
   svg.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    drag = { x: event.clientX, y: event.clientY, view: { ...state.view }, moved: 0, captured: false };
-  });
-  svg.addEventListener("pointermove", (event) => {
-    if (!drag) return;
-    const rect = svg.getBoundingClientRect();
-    drag.moved += Math.abs(event.movementX) + Math.abs(event.movementY);
-    if (drag.moved > 6 && !drag.captured) {
-      drag.captured = true;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (activePointers.size === 1) {
+      drag = { x: event.clientX, y: event.clientY, view: { ...state.view }, moved: 0, captured: false };
+      pinchStart = null;
+    } else if (activePointers.size === 2) {
+      const pts = Array.from(activePointers.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      const rect = svg.getBoundingClientRect();
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      pinchStart = {
+        dist,
+        view: { ...state.view },
+        midX,
+        midY,
+        fx: Math.min(1, Math.max(0, (midX - rect.left) / rect.width)),
+        fy: Math.min(1, Math.max(0, (midY - rect.top) / rect.height)),
+      };
+      drag = null;
       state.suppressClick = true;
       $(".map-wrap").classList.add("is-panning");
-      svg.setPointerCapture(event.pointerId);
     }
-    state.view = {
-      x: drag.view.x - ((event.clientX - drag.x) * drag.view.w) / rect.width,
-      y: drag.view.y - ((event.clientY - drag.y) * drag.view.h) / rect.height,
-      w: drag.view.w,
-      h: drag.view.h,
-    };
-    applyView();
   });
-  const stop = () => {
-    drag = null;
-    $(".map-wrap").classList.remove("is-panning");
-    setTimeout(() => { state.suppressClick = false; }, 0);
+
+  svg.addEventListener("pointermove", (event) => {
+    if (!activePointers.has(event.pointerId)) return;
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (activePointers.size >= 2 && pinchStart) {
+      const pts = Array.from(activePointers.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      const factor = pinchStart.dist / dist;
+      const w = Math.min(2200, Math.max(120, pinchStart.view.w * factor));
+      const h = Math.min(1400, Math.max(80, pinchStart.view.h * factor));
+      state.view = {
+        x: pinchStart.view.x + (pinchStart.view.w - w) * pinchStart.fx,
+        y: pinchStart.view.y + (pinchStart.view.h - h) * pinchStart.fy,
+        w,
+        h,
+      };
+      applyView();
+      return;
+    }
+
+    if (drag && activePointers.size === 1) {
+      const rect = svg.getBoundingClientRect();
+      drag.moved += Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0);
+      if (drag.moved > 6 && !drag.captured) {
+        drag.captured = true;
+        state.suppressClick = true;
+        $(".map-wrap").classList.add("is-panning");
+        try { svg.setPointerCapture(event.pointerId); } catch {}
+      }
+      state.view = {
+        x: drag.view.x - ((event.clientX - drag.x) * drag.view.w) / rect.width,
+        y: drag.view.y - ((event.clientY - drag.y) * drag.view.h) / rect.height,
+        w: drag.view.w,
+        h: drag.view.h,
+      };
+      applyView();
+    }
+  });
+
+  const stopPointer = (event) => {
+    activePointers.delete(event.pointerId);
+    try { svg.releasePointerCapture(event.pointerId); } catch {}
+    if (activePointers.size === 1) {
+      const remaining = Array.from(activePointers.values())[0];
+      drag = { x: remaining.x, y: remaining.y, view: { ...state.view }, moved: 0, captured: true };
+      pinchStart = null;
+    } else if (activePointers.size === 0) {
+      drag = null;
+      pinchStart = null;
+      $(".map-wrap").classList.remove("is-panning");
+      setTimeout(() => { state.suppressClick = false; }, 0);
+    }
   };
-  svg.addEventListener("pointerup", stop);
-  svg.addEventListener("pointercancel", stop);
+
+  svg.addEventListener("pointerup", stopPointer);
+  svg.addEventListener("pointercancel", stopPointer);
 
   window.addEventListener("resize", debounce(() => {
     if (!document.fullscreenElement) fitView();
@@ -735,7 +792,18 @@ function renderRoutes(routes) {
     card.addEventListener("mouseleave", () => setActiveRoute(null, true));
     card.addEventListener("click", () => openVehicle(route.vehicle_id));
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(route.vehicle_id); }
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openVehicle(route.vehicle_id);
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const next = card.nextElementSibling || container.firstElementChild;
+        if (next && next.focus) next.focus();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const prev = card.previousElementSibling || container.lastElementChild;
+        if (prev && prev.focus) prev.focus();
+      }
     });
     container.appendChild(card);
   }
@@ -1330,6 +1398,12 @@ async function simulateIncident(kind) {
   };
   if (kind === "breakdown") payload.vehicle_id = used[0].vehicle_id;
   setMascot(INCIDENT_PENDING[kind] || "Đang xử lý sự cố…");
+
+  const incidentBtns = document.querySelectorAll(".incident");
+  const targetBtn = $(`#incident-${kind === "depot_closed" ? "depot" : kind}`);
+  incidentBtns.forEach((btn) => { btn.disabled = true; });
+  if (targetBtn) targetBtn.classList.add("is-busy");
+
   try {
     const result = await api("/api/incident", {
       method: "POST",
@@ -1352,6 +1426,9 @@ async function simulateIncident(kind) {
   } catch (error) {
     updateMascotFromPlan();
     toast(`Không xử lý được sự cố: ${error.message}`, "error");
+  } finally {
+    incidentBtns.forEach((btn) => { btn.disabled = false; });
+    if (targetBtn) targetBtn.classList.remove("is-busy");
   }
 }
 

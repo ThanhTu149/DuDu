@@ -8,6 +8,11 @@
 <meta property="og:title" content="DuDu — Điều phối giao hàng nội thành" />
 <meta property="og:description" content="Hệ thống tối ưu tuyến giao hàng nội thành TP.HCM — chia đơn, xếp tuyến, giữ cam kết giờ giao." />
 <meta property="og:type" content="website" />
+<meta property="og:image" content="/assets/banner.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="DuDu — Điều phối giao hàng nội thành" />
+<meta name="twitter:description" content="Hệ thống tối ưu tuyến giao hàng nội thành TP.HCM — chia đơn, xếp tuyến, giữ cam kết giờ giao." />
+<meta name="twitter:image" content="/assets/banner.jpg" />
 <title>DuDu — Điều phối giao hàng nội thành</title>
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64" />
 <link rel="apple-touch-icon" href="/assets/favicon-180.png" />
@@ -95,15 +100,15 @@
     </header>
 
     <div class="status-zone">
-    <section class="kpi-strip" id="kpis" aria-label="Chỉ số ca làm việc">
+    <section class="kpi-strip" id="kpis" aria-label="Chỉ số ca làm việc" aria-live="polite" aria-atomic="false">
       <div class="kpi-grid">
         <article class="kpi-card">
           <span class="kpi-ico kpi-ico--route"><span class="ic" style="--icon:url('/assets/icons/route.svg')"></span></span>
-          <div class="kpi-body"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
+          <div class="kpi-body" aria-atomic="true"><span class="kpi-label">Tổng quãng đường</span><span class="kpi-value" id="kpi-km">—</span></div>
         </article>
         <article class="kpi-card">
           <span class="kpi-ico kpi-ico--clock"><span class="ic" style="--icon:url('/assets/icons/clock.svg')"></span></span>
-          <div class="kpi-body"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
+          <div class="kpi-body" aria-atomic="true"><span class="kpi-label">Đúng giờ</span><span class="kpi-value" id="kpi-ontime">—</span></div>
           <svg class="kpi-ring" viewBox="0 0 32 32" aria-hidden="true">
             <circle class="kpi-ring-track" cx="16" cy="16" r="13"></circle>
             <circle class="kpi-ring-fill" id="kpi-ring" cx="16" cy="16" r="13" transform="rotate(-90 16 16)"></circle>
@@ -111,16 +116,16 @@
         </article>
         <article class="kpi-card">
           <span class="kpi-ico kpi-ico--package"><span class="ic" style="--icon:url('/assets/icons/package.svg')"></span></span>
-          <div class="kpi-body"><span class="kpi-label">Đơn trễ</span><span class="kpi-value" id="kpi-late">—</span></div>
+          <div class="kpi-body" aria-atomic="true"><span class="kpi-label">Đơn trễ</span><span class="kpi-value" id="kpi-late">—</span></div>
         </article>
         <article class="kpi-card">
           <span class="kpi-ico kpi-ico--warning"><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span></span>
-          <div class="kpi-body"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
+          <div class="kpi-body" aria-atomic="true"><span class="kpi-label">Vi phạm luật</span><span class="kpi-value" id="kpi-violations">—</span></div>
         </article>
       </div>
-      <div class="kpi-note" id="kpi-note">Bấm “Lập kế hoạch” để chạy tác tử</div>
+      <div class="kpi-note" id="kpi-note" aria-live="polite">Bấm “Lập kế hoạch” để chạy tác tử</div>
     </section>
-    <section id="incident-strip" class="incident-bar" hidden aria-label="So sánh trước và sau sự cố"></section>
+    <section id="incident-strip" class="incident-bar" hidden aria-label="So sánh trước và sau sự cố" aria-live="polite"></section>
     </div>
 
     <main class="workspace">
