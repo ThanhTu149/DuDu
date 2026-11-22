@@ -62,29 +62,63 @@ def init() -> None:
 
 
 def save(kind: str, request: dict, result: dict) -> int | None:
-    """Ghi một kế hoạch; lỗi ghi không được làm hỏng request chính (trả None)."""
+    """Ghi một kế hoạch; lỗi ghi không được làm hỏng request chính (trả None).
+
+    Chống trùng: nếu kết quả + cấu hình y hệt bản ghi mới nhất thì chỉ cập nhật lại thời
+    gian (và payload mới nhất) thay vì chèn thêm dòng — tránh danh sách đầy rác khi demo
+    bấm "Lập kế hoạch" nhiều lần.
+    """
     try:
         init()
         metrics = result.get("metrics", {})
+        incident = result.get("incident") or {}
+        incident_kind = incident.get("kind") if isinstance(incident, dict) else None
+        if not incident_kind and kind == "incident":
+            incident_kind = request.get("kind")
+        imported = result.get("import") or {}
         summary = {
-            "seed": result.get("seed"),
+            "source": kind,
+            "seed": result.get("seed") or request.get("seed"),
             "orders": metrics.get("orders"),
             "vehicles": metrics.get("vehicles_used"),
+            "fleet_size": request.get("vehicles"),
             "total_km": metrics.get("total_km"),
             "total_min": metrics.get("total_min"),
             "late_count": metrics.get("late_count"),
             "on_time_rate": metrics.get("on_time_rate"),
             "violations": metrics.get("violations"),
             "blocked": metrics.get("blocked"),
+            "warnings": len(result.get("warnings") or []),
+            "incident": incident_kind,
+            "assignment": request.get("assignment"),
+            "routing": request.get("routing"),
+            "eta": request.get("eta"),
+            "rows": imported.get("count"),
+            "dropped_rows": len(imported.get("warnings") or []),
         }
         payload = json.dumps(result, ensure_ascii=False)
+        summary_json = json.dumps(summary, ensure_ascii=False)
+        request_json = json.dumps(request, ensure_ascii=False)
         now = datetime.now(timezone.utc).isoformat()
         with closing(_connect()) as connection, connection:
+            latest = connection.execute(
+                "SELECT id, kind, summary_json, request_json FROM plans ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            if (
+                latest is not None
+                and latest["kind"] == kind
+                and latest["summary_json"] == summary_json
+                and latest["request_json"] == request_json
+            ):
+                connection.execute(
+                    "UPDATE plans SET created_at = ?, payload_json = ? WHERE id = ?",
+                    (now, payload, latest["id"]),
+                )
+                return int(latest["id"])
             cursor = connection.execute(
                 "INSERT INTO plans (created_at, kind, summary_json, request_json, payload_json) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (now, kind, json.dumps(summary, ensure_ascii=False),
-                 json.dumps(request, ensure_ascii=False), payload),
+                (now, kind, summary_json, request_json, payload),
             )
             return int(cursor.lastrowid)
     except Exception:
@@ -132,6 +166,17 @@ def delete(plan_id: int) -> bool:
         return False
 
 
+def clear() -> int:
+    """Xoá toàn bộ lịch sử, trả về số bản ghi đã xoá."""
+    try:
+        init()
+        with closing(_connect()) as connection, connection:
+            cursor = connection.execute("DELETE FROM plans")
+        return int(cursor.rowcount)
+    except Exception:
+        return 0
+
+
 def prune(keep: int = 200) -> int:
     """Giữ tối đa `keep` bản ghi mới nhất (gọi định kỳ nếu DB phình)."""
     try:
@@ -165,5 +210,6 @@ def get(plan_id: int) -> dict | None:
         "request": json.loads(row["request_json"]),
         "payload": json.loads(row["payload_json"]),
     }
+
 
 

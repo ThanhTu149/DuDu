@@ -143,6 +143,38 @@ class TestImportAndHistoryApi(unittest.TestCase):
         self.assertTrue(second["items"])
         self.assertFalse({item["id"] for item in first["items"]} & {item["id"] for item in second["items"]})
 
+    def test_history_clear_all(self) -> None:
+        csv = SAMPLE_CSV.read_text(encoding="utf-8")
+        self.client.post("/api/plan/import", json={"csv": csv, "seed": 41, "vehicles": 6})
+        cleared = self.client.delete("/api/history")
+        self.assertEqual(cleared.status_code, 200)
+        self.assertGreaterEqual(cleared.json()["deleted"], 1)
+        self.assertEqual(cleared.json()["total"], 0)
+        listing = self.client.get("/api/history").json()
+        self.assertEqual(listing["total"], 0)
+        self.assertEqual(listing["items"], [])
+
+    def test_history_deduplicates_identical_plans(self) -> None:
+        csv = SAMPLE_CSV.read_text(encoding="utf-8")
+        first = self.client.post("/api/plan/import", json={"csv": csv, "seed": 51, "vehicles": 6}).json()
+        before = self.client.get("/api/history?limit=100").json()["total"]
+        second = self.client.post("/api/plan/import", json={"csv": csv, "seed": 51, "vehicles": 6}).json()
+        listing = self.client.get("/api/history?limit=100").json()
+        self.assertEqual(listing["total"], before)
+        self.assertEqual(first["history_id"], second["history_id"])
+
+    def test_history_summary_has_context_labels(self) -> None:
+        csv = SAMPLE_CSV.read_text(encoding="utf-8")
+        created = self.client.post("/api/plan/import", json={"csv": csv, "seed": 61, "vehicles": 6}).json()
+        listing = self.client.get("/api/history?limit=100").json()
+        item = next(row for row in listing["items"] if row["id"] == created["history_id"])
+        summary = item["summary"]
+        self.assertEqual(summary["source"], "import")
+        self.assertEqual(summary["rows"], 12)
+        self.assertEqual(summary["seed"], 61)
+        self.assertIn("violations", summary)
+        self.assertIn("blocked", summary)
+
     def test_history_delete(self) -> None:
         csv = SAMPLE_CSV.read_text(encoding="utf-8")
         created = self.client.post("/api/plan/import", json={"csv": csv, "seed": 31, "vehicles": 6}).json()
@@ -165,5 +197,6 @@ class TestImportAndHistoryApi(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

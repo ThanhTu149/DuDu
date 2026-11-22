@@ -99,6 +99,9 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn("info.interval", js)
         self.assertIn(".history-del", js)
         self.assertIn("history?limit=20&offset=", js)
+        self.assertIn("history-clear", js)
+        self.assertIn("fmtPercent", js)
+        self.assertIn("Xuất CSV", html)
 
     def test_map_legend_matches_symbols(self) -> None:
         # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
@@ -133,6 +136,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

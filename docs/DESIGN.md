@@ -583,3 +583,15 @@ Kiểm chứng 1366×768 và 1920×1080, light + dark: ảnh load đủ 3, cao �
   `vehicles` gốc nên thẻ đơn trên bản đồ, drawer chi tiết và thẻ tài xế hiển thị đúng dữ liệu
   của kế hoạch được khôi phục (kể cả kế hoạch nhập CSV).
 - Sự cố được khôi phục thì `markIncident(kind)` bật lại trạng thái banner sự cố tương ứng.
+
+## 26. Bản v24 — chỉnh UX lịch sử & nhập CSV
+
+- Chống trùng lịch sử: cùng `kind` + request + summary → chỉ cập nhật `created_at`; khởi động dọn
+  nhóm trùng cũ (giữ bản mới nhất) nên danh sách demo không bị rác khi bấm lại nhiều lần.
+- Mỗi dòng lịch sử có nhãn ngữ cảnh riêng: kịch bản kèm seed, nguồn CSV kèm số dòng, sự cố kèm
+  loại (Xe hỏng/Kẹt xe/Kho đóng/Cấm tải). Dòng phụ hiện `N chặn · M cảnh báo`.
+- Bản ghi đang hiển thị được đánh dấu `is-current` (viền accent + nhãn “đang hiển thị”).
+- Chân modal có **Xoá tất cả (N)**; mỗi dòng có nút **×**; vẫn giữ **Tải thêm** khi còn bản cũ.
+- Thống nhất định dạng phần trăm tiếng Việt (97,9%) giữa KPI và lịch sử; `#modal-body` thêm
+  padding-bottom 28px để dòng cuối không bị cắt sát đáy.
+- Nút xuất trên bản đồ đổi thành **Xuất CSV** để đối xứng với **Nhập CSV** ở header.

@@ -69,3 +69,15 @@ bấm nền.
 `GET /api/history` có phân trang (`limit`, `offset`, trả thêm `total`); `DELETE /api/history/{id}`
 xoá một bản ghi. Trên giao diện: nút **×** cạnh mỗi dòng để xoá (có xác nhận) và nút
 **Tải thêm** khi còn bản ghi cũ hơn.
+
+## Chống trùng & quản lý lịch sử
+
+- **Chống trùng**: nếu cấu hình (request) và kết quả (metrics/violations) giống hệt bản ghi mới
+  nhất, hệ thống chỉ cập nhật lại `created_at` thay vì chèn dòng mới; khi khởi động còn dọn một
+  lần các nhóm trùng cũ (giữ bản mới nhất).
+- **Ngữ cảnh từng dòng**: `KỊCH BẢN · seed 7`, `NHẬP CSV · 12 dòng`, hoặc
+  `SỰ CỐ · Xe hỏng | Kẹt xe | Kho đóng | Cấm tải · seed 7`; dòng phụ hiện số vi phạm
+  (chặn / cảnh báo); bản đang hiển thị có nhãn “đang hiển thị” và viền accent.
+- **Quản lý**: nút **×** xoá từng bản ghi, nút **Xoá tất cả** ở chân modal, **Tải thêm** khi còn
+  bản cũ hơn. Số liệu dùng định dạng tiếng Việt (dấu phẩy thập phân) thống nhất với dải KPI.
+- **Xuất CSV**: nút trên bản đồ đổi tên thành **Xuất CSV** để đối xứng với **Nhập CSV** ở header.

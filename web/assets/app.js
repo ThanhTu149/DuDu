@@ -1800,17 +1800,44 @@ function historyTime(iso) {
 }
 
 const historyState = { items: [], total: 0 };
+const HISTORY_INCIDENT_LABEL = {
+  breakdown: "Xe hỏng",
+  congestion: "Kẹt xe",
+  depot_closed: "Kho đóng",
+  truck_ban: "Cấm tải",
+};
+
+function fmtPercent(value, digits = 1) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return number.toLocaleString("vi-VN", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
 
 function historyRow(item) {
   const summary = item.summary || {};
-  const kind = HISTORY_KIND_LABEL[item.kind] || item.kind;
-  const onTime = Number(summary.on_time_rate ?? 0).toFixed(1);
+  const isCurrent = state.plan?.history_id === item.id;
+  const seed = summary.seed ?? "?";
+  let label;
+  if (item.kind === "import") {
+    label = `NHẬP CSV · ${summary.rows ?? summary.orders ?? "?"} dòng`;
+  } else if (item.kind === "incident") {
+    label = `SỰ CỐ · ${HISTORY_INCIDENT_LABEL[summary.incident] || summary.incident || "?"} · seed ${seed}`;
+  } else {
+    label = `KỊCH BẢN · seed ${seed}`;
+  }
+  const onTime = fmtPercent(summary.on_time_rate);
   const km = Number(summary.total_km ?? 0);
-  return `<div class="history-row">
+  const violations = Number(summary.violations ?? 0);
+  const blocked = Number(summary.blocked ?? 0);
+  const conflictText = violations
+    ? `${blocked} chặn · ${Math.max(0, violations - blocked)} cảnh báo`
+    : "không vi phạm";
+  return `<div class="history-row${isCurrent ? " is-current" : ""}">
     <button class="history-item" type="button" data-id="${item.id}">
-      <span class="history-kind history-kind--${esc(item.kind)}">${esc(kind)}</span>
+      <span class="history-kind history-kind--${esc(item.kind)}">${esc(label)}</span>
       <span class="history-main"><span>${esc(historyTime(item.created_at))}</span><b>${fmtKm(km)} km</b></span>
       <span class="history-meta">${summary.orders ?? "?"} đơn · ${summary.late_count ?? 0} trễ · ${onTime}% đúng giờ</span>
+      <span class="history-meta history-sub">${conflictText}${isCurrent ? ' · <em class="history-now">đang hiển thị</em>' : ""}</span>
       <span class="history-go" aria-hidden="true">↺</span>
     </button>
     <button class="history-del" type="button" data-id="${item.id}"
@@ -1823,9 +1850,12 @@ function renderHistoryBody() {
   const more = historyState.items.length < historyState.total
     ? `<button id="history-more" class="btn btn-quiet history-more" type="button">Tải thêm (${historyState.items.length}/${historyState.total})</button>`
     : "";
+  const clear = historyState.total
+    ? `<div class="history-footer"><button id="history-clear" class="btn btn-quiet history-clear" type="button">Xoá tất cả (${historyState.total})</button></div>`
+    : "";
   $("#modal-body").innerHTML =
     '<p class="history-hint">Chọn một kế hoạch để khôi phục lại bản đồ, KPI và nhật ký.</p>'
-    + `<div class="history-list">${rows}</div>${more}`;
+    + `<div class="history-list">${rows}</div>${more}${clear}`;
 }
 
 async function openHistory(reset = true) {
@@ -1865,6 +1895,21 @@ async function deleteHistory(planId) {
     toast(`Đã xoá kế hoạch #${planId}`);
   } catch (error) {
     toast(`Không xoá được kế hoạch #${planId}: ${error.message}`, "error");
+  }
+}
+
+async function clearHistory() {
+  if (!historyState.total) return;
+  if (!window.confirm(`Xoá toàn bộ ${historyState.total} bản ghi lịch sử? Không khôi phục lại được.`)) return;
+  try {
+    const data = await api("/api/history", { method: "DELETE" });
+    historyState.items = [];
+    historyState.total = 0;
+    $("#modal-title").textContent = "Lịch sử kế hoạch (0)";
+    $("#modal-body").innerHTML = '<p class="history-empty">Đã xoá toàn bộ lịch sử kế hoạch.</p>';
+    toast(`Đã xoá ${data.deleted ?? 0} bản ghi lịch sử`);
+  } catch (error) {
+    toast(`Không xoá được lịch sử: ${error.message}`, "error");
   }
 }
 
@@ -1958,6 +2003,10 @@ async function loadEtaInfo() {
     }
     if (event.target.closest?.("#history-more")) {
       openHistory(false);
+      return;
+    }
+    if (event.target.closest?.("#history-clear")) {
+      clearHistory();
       return;
     }
     const item = event.target.closest?.(".history-item");
@@ -2157,6 +2206,7 @@ async function loadEtaInfo() {
     }
   }
 })();
+
 
 
 

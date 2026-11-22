@@ -30,6 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .dispatch.agent import DispatcherAgent
 from .dispatch.evaluate import compare_routing, compare_strategies
+from .dispatch.history import clear as history_clear
 from .dispatch.history import count as history_count
 from .dispatch.history import delete as history_delete_record
 from .dispatch.history import get as history_get
@@ -342,6 +343,12 @@ def history_list(
         "limit": limit,
         "offset": offset,
     }
+
+
+@app.delete("/api/history")
+def history_clear_all() -> dict:
+    """Xoá toàn bộ lịch sử kế hoạch (dùng cho nút "Xoá tất cả" trên giao diện)."""
+    return {"deleted": history_clear(), "total": history_count()}
 
 
 @app.get("/api/history/{plan_id}")

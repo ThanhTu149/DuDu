@@ -1908,3 +1908,16 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
 }
 .history-del:hover { color: var(--alert); border-color: var(--alert); }
 .history-more { margin-top: 10px; width: 100%; justify-content: center; }
+
+/* v24: lịch sử — nhãn ngữ cảnh, bản ghi đang hiển thị, xoá tất cả */
+.history-item { grid-template-areas: "kind main go" "kind meta go" "kind sub go"; }
+.history-sub { color: var(--ink-3); }
+.history-now { font-style: normal; color: var(--accent); font-weight: 600; }
+.history-row.is-current .history-item {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.history-footer { margin-top: 12px; display: flex; justify-content: flex-end; padding-bottom: 4px; }
+.history-clear { color: var(--alert); border-color: var(--line-soft); }
+.history-clear:hover { border-color: var(--alert); }
+#modal-body { padding-bottom: 28px; }

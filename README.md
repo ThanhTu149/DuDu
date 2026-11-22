@@ -7,7 +7,10 @@ nhận đơn → dự đoán thời gian giao (ETA) → chia đơn cho tài xế
 ràng buộc vận hành và giải trình lại quyết định.
 
 Ngoài dữ liệu sinh theo seed, hệ thống nhận **đơn hàng thật từ CSV** (tối đa 200 dòng, kiểm
-tra từng dòng), lưu **lịch sử kế hoạch** vào SQLite kèm nút **Lịch sử** trên giao diện để khôi phục lại bản đồ, KPI và nhật ký.
+tra từng dòng), lưu **lịch sử kế hoạch** vào SQLite kèm nút **Lịch sử** trên giao diện để khôi phục lại bản đồ,
+KPI và nhật ký. Lịch sử tự chống trùng (cùng cấu hình + kết quả thì cập nhật giờ thay vì thêm
+dòng), hiển thị ngữ cảnh (seed / nguồn CSV / loại sự cố / số vi phạm), đánh dấu bản đang xem và
+có nút xoá từng bản ghi + **Xoá tất cả**.
 Đề tài phát triển từ các gợi ý **31 (tối ưu tuyến đường), 32 (dự đoán ETA), 33 (phân bổ
 đơn hàng)** trong danh sách đề tài của học phần.
 
@@ -245,6 +248,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
