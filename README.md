@@ -85,6 +85,24 @@ python -m unittest discover -s tests -v        # 74 ca kiểm thử
   các bưu cục quận…) + đơn hàng sinh theo seed để tái lập được kết quả.
 - **ETA**: xem `ml/README.md` — dữ liệu hành trình thật, có hiệu chỉnh về bối cảnh TP.HCM.
 
+## Kết quả thực nghiệm (sinh tự động, tái lập được)
+
+Hai script dưới đây sinh báo cáo trong `docs/`, seed cố định nên chạy lại ra đúng từng con số:
+
+```powershell
+python -m backend.dispatch.optimal --report     # -> docs/ket-qua-toi-uu.md
+python -m backend.dispatch.robustness --report  # -> docs/ket-qua-do-ben.md
+```
+
+- **Optimality gap xếp tuyến** (`docs/ket-qua-toi-uu.md`): so 6 chiến lược sắp thứ tự giao
+  với thứ tự tối ưu (Held–Karp) trên cùng phân công. NN + 2-opt chỉ lệch **1,4%** (lớn nhất
+  2,9%), Nearest Neighbor lệch 2,8%, thứ tự nhập đơn lệch 17,6%.
+- **Độ bền vững** (`docs/ket-qua-do-ben.md`): 30 seed × (48 đơn, 8 xe) cho quãng đường
+  179,5 ± 36,3 km, đúng giờ 99,4 ± 1,3%; 2-opt giảm 29,3% quãng đường so với thứ tự nhập đơn;
+  chiến lược `deadline` thêm 9,7% km nhưng kéo đơn trễ từ 2,23 xuống 0,27.
+- **Độ nhạy tham số**: `max_rounds` hội tụ sau 4 vòng; bán kính vùng ùn tắc 2→8 km làm A*
+  phải đi vòng 3,5→227,4 km, là căn cứ chọn mặc định 4,5 km.
+
 ## Kiểm thử tự động
 
 Repo có bộ kiểm thử cho phần lõi (không cần cài mô hình, không gọi mạng):
@@ -147,6 +165,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
