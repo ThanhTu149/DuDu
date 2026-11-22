@@ -111,7 +111,8 @@ def sequence_score(
     for order_id, hub_id in sequence:
         minutes, _ = _travel(net, current, hub_id, speed_factor)
         if eta_model is not None:
-            minutes *= eta_model.hour_factor(clock)
+            # hour_factor nhận giờ trong ngày (0–23), không phải số phút kể từ 00:00
+            minutes *= eta_model.hour_factor(int(clock) // 60 % 24)
         clock += minutes
         travel += minutes
         if orders_by_id is not None and late_penalty:
@@ -249,7 +250,7 @@ def two_opt(
         for index in order_indices:
             minutes = leg[previous][index]
             if multipliers is not None:
-                minutes *= multipliers[int(clock) % 24]
+                minutes *= multipliers[int(clock) // 60 % 24]
             clock += minutes
             travel += minutes
             if penalise:
@@ -332,7 +333,8 @@ def schedule_route(
         order = by_id[order_id]
         minutes, km = _travel(net, current, hub_id, speed_factor)
         if eta_model is not None:
-            minutes *= eta_model.hour_factor(clock)
+            # hour_factor nhận giờ trong ngày (0–23), không phải số phút kể từ 00:00
+            minutes *= eta_model.hour_factor(int(clock) // 60 % 24)
         route.legs.append({
             "from": current,
             "to": hub_id,
@@ -422,3 +424,4 @@ def clock_label(minutes_from_midnight: float) -> str:
     if minute == 60:
         hour, minute = (hour + 1) % 24, 0
     return f"{hour:02d}:{minute:02d}"
+

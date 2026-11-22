@@ -113,18 +113,35 @@ def uncertainty(frame: pd.DataFrame) -> dict:
     calib = frame[(frame["day"] >= 25) & (frame["day"] <= 27)].copy()
     evaluation = frame[frame["day"] >= 28].copy()
 
-    calib["bin"] = pd.qcut(calib["pred"], 10, labels=False, duplicates="drop")
-    quantiles = calib.groupby("bin")["residual"].quantile([0.1, 0.9]).unstack()
-    evaluation["bin"] = pd.qcut(evaluation["pred"], 10, labels=False, duplicates="drop")
+    # Ưu tiên dùng đúng bảng phân vị đã xuất cho API (ml/calibrate_eta.py) để số liệu
+    # trong báo cáo, API và UI khớp nhau; chỉ khi thiếu file mới chia lại nhóm tại chỗ.
+    quantiles_path = MODEL_DIR / "eta_quantiles.json"
+    calib_count = int(len(calib))
+    if quantiles_path.exists():
+        saved = json.loads(quantiles_path.read_text(encoding="utf-8"))
+        bins = saved.get("bins") or []
+        calib_count = int(saved.get("calibration_rows") or len(calib))
+        lower = []
+        upper = []
+        for predicted in evaluation["pred"]:
+            chosen = next((item for item in bins if float(predicted) <= item["upper_min"]), bins[-1])
+            lower.append(float(predicted) + float(chosen["q10"]))
+            upper.append(float(predicted) + float(chosen["q90"]))
+        evaluation["lower"] = lower
+        evaluation["upper"] = upper
+    else:
+        calib["bin"] = pd.qcut(calib["pred"], 10, labels=False, duplicates="drop")
+        quantiles = calib.groupby("bin")["residual"].quantile([0.1, 0.9]).unstack()
+        evaluation["bin"] = pd.qcut(evaluation["pred"], 10, labels=False, duplicates="drop")
 
-    lower = []
-    upper = []
-    for _, row in evaluation.iterrows():
-        index = min(int(row["bin"]) if pd.notna(row["bin"]) else 0, len(quantiles) - 1)
-        lower.append(row["pred"] + quantiles.iloc[index][0.1])
-        upper.append(row["pred"] + quantiles.iloc[index][0.9])
-    evaluation["lower"] = lower
-    evaluation["upper"] = upper
+        lower = []
+        upper = []
+        for _, row in evaluation.iterrows():
+            index = min(int(row["bin"]) if pd.notna(row["bin"]) else 0, len(quantiles) - 1)
+            lower.append(row["pred"] + quantiles.iloc[index][0.1])
+            upper.append(row["pred"] + quantiles.iloc[index][0.9])
+        evaluation["lower"] = lower
+        evaluation["upper"] = upper
     inside = (evaluation[TARGET] >= evaluation["lower"]) & (evaluation[TARGET] <= evaluation["upper"])
     width = evaluation["upper"] - evaluation["lower"]
 
@@ -134,7 +151,7 @@ def uncertainty(frame: pd.DataFrame) -> dict:
 
     peak = evaluation["is_peak"] == 1
     return {
-        "n_calib": int(len(calib)),
+        "n_calib": calib_count,
         "n_eval": int(len(evaluation)),
         "coverage": float(inside.mean()),
         "width": float(width.mean()),

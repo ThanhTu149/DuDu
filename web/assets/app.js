@@ -1945,6 +1945,7 @@ async function restoreHistory(planId) {
   try {
     const record = await api(`/api/history/${planId}`);
     const plan = record.payload;
+    plan.history_id = planId; // payload lưu trước khi có id; gán lại để UI đánh dấu bản đang xem
     closeModal();
     paintPlan(plan);
     updateMascotFromPlan();
@@ -2233,6 +2234,7 @@ async function loadEtaInfo() {
     }
   }
 })();
+
 
 
 

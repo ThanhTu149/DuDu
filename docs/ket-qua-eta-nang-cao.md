@@ -28,10 +28,10 @@ nhóm thời gian dự đoán; kiểm tra độ phủ trên giai đoạn evaluat
 
 | Phương pháp | Độ phủ thực tế | Độ rộng TB (phút) |
 |---|---:|---:|
-| Phân vị phần dư theo nhóm dự đoán | **82.0%** | 11.42 |
+| Phân vị phần dư theo nhóm dự đoán | **81.3%** | 11.26 |
 | Baseline ±15% thời gian dự đoán | 40.0% | 4.30 |
 
-- Độ phủ cao điểm 80.3%, ngoài cao điểm 82.9% (n = 25682 chuyến).
+- Độ phủ cao điểm 79.6%, ngoài cao điểm 82.0% (n = 25682 chuyến).
 - Cách làm này cho phép API/UI trả kèm khoảng ± để điều phối viên biết mức bất định,
   thay vì chỉ một con số ETA duy nhất.
 
@@ -51,20 +51,3 @@ mô hình đầy đủ.
 
 Đọc kết quả: quãng đường vẫn là đặc trưng quyết định; các đặc trưng thời gian đóng góp
 phần còn lại và đặc biệt quan trọng khi so sánh cao điểm với ngoài cao điểm.
-
-## Tái lập khoảng tin cậy
-
-```powershell
-python ml/train_eta.py          # nếu chưa có mô hình
-python ml/calibrate_eta.py      # sinh ml/models/eta_quantiles.json
-```
-
-File JSON nhỏ (~1 KB) được commit để API trả khoảng tin cậy ngay cả khi mô hình nặng không
-nằm trong git; nếu thiếu file, `/api/eta/interval` trả 503 kèm hướng dẫn.
-
-## Hiển thị trên giao diện
-
-- “Cấu hình giả lập” hiện dòng tóm tắt khoảng 80% (độ rộng trung bình + độ phủ).
-- Bấm vào một điểm giao khi đang bật **ETA mô hình**: drawer chi tiết có thêm dòng
-  **“Khoảng tin cậy”** gọi `/api/eta/interval` theo quãng đường và giờ của chặng, ví dụ
-  `17,6–44,8 phút (80%, dự đoán 27,5)`.

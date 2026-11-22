@@ -63,20 +63,23 @@ giờ**; không bê nguyên tốc độ tuyệt đối của taxi New York sang 
 
 ## Ảnh hưởng lên kế hoạch điều phối
 
-Cùng lô 48 đơn, seed 7, cùng cách chia đơn Hungary, cùng chiến lược xếp tuyến có hạn giao:
+Cùng lô 48 đơn, seed 7, cùng cách chia đơn Hungary, cùng chiến lược xếp tuyến có hạn giao.
+Hệ số ùn tắc được áp theo **giờ trong ngày** (0–23) tại thời điểm xuất phát mỗi chặng:
 
 | Cách tính thời gian | Tổng phút xe chạy | Đơn trễ | Phút trễ | Tổng km |
 |---|---|---|---|---|
 | OSRM free-flow | 446,5 | 1 | 7,6 | 160,3 |
-| OSRM × hệ số ùn tắc (mô hình) | 417,5 | 0 | 0,0 | 190,6 |
+| OSRM × hệ số ùn tắc (mô hình) | 450,2 | 1 | 8,6 | 160,3 |
 
-Nhận xét trung thực: kế hoạch "biết ùn tắc" **không** làm xe chạy nhanh hơn — nó chấp nhận
-đi xa hơn **+30 km** để né những chặng rơi vào giờ chậm, đổi lấy **0 đơn trễ** thay vì 1 đơn
-trễ 7,6 phút. Tổng phút ước tính thấp hơn vì bộ xếp tuyến chọn thứ tự ít rơi vào khung giờ
-xấu; con số này là thời gian *theo mô hình*, không phải đồng hồ thực.
+Nhận xét trung thực: khi tính đúng hệ số theo giờ, kế hoạch "biết ùn tắc" dự báo tổng thời
+gian **dài hơn free-flow 3,7 phút (+0,8%)**, quãng đường và số đơn trễ không đổi. So sánh
+thêm seed 11 và 21 cũng cho kết quả tương tự (+0,7–1,0% thời gian, cùng km và số trễ) — mô
+hình không tìm được thứ tự giao rẻ hơn vì thời gian thực tế tăng đều trên mọi chặng.
 
-Đây là lập luận nên dùng khi bảo vệ: mô hình không tạo ra tốc độ, nó làm **kế hoạch trung
-thực và biết đánh đổi hơn**.
+Đây là kết luận đúng bản chất: **mô hình không tạo ra tốc độ**. Giá trị của nó nằm ở chỗ
+ETA sát thực tế hơn, có khoảng tin cậy 80% (xem `docs/ket-qua-eta-nang-cao.md`), và giúp
+điều phối viên thấy trước nguy cơ trễ thay vì tin vào con số free-flow lạc quan. Muốn giảm
+trễ thật cần đổi lịch xuất phát/đội xe, không chỉ đổi thứ tự giao.
 
 ## Giới hạn
 
@@ -92,4 +95,5 @@ thực và biết đánh đổi hơn**.
 Xem `docs/ket-qua-eta-nang-cao.md` (sinh bằng `python ml/advanced_eval.py --report`):
 tuning hyperparameter bằng rolling-origin CV, khoảng tin cậy thực nghiệm 80% và ablation
 đặc trưng. Kết quả chính: cấu hình HGB mặc định đã gần tối ưu theo CV; khoảng 80% đạt độ phủ
-82,0% (baseline ±15% chỉ 40,0%); bỏ nhóm đặc trưng giờ làm MAE tăng lên 3,806 phút.
+81,3% (baseline ±15% chỉ 40,0%); bỏ nhóm đặc trưng giờ làm MAE tăng lên 3,806 phút.
+

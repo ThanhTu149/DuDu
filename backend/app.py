@@ -11,6 +11,7 @@ sự cố" theo cùng bộ ba + chiến lược, nên bấm sự cố liên ti�
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -315,7 +316,15 @@ def plan_import(payload: ImportPlanRequest) -> dict:
     result["orders"] = parsed["orders"]
     result["vehicles"] = [vehicle.as_dict() for vehicle in vehicles]
     result["history_id"] = history_save(
-        "import", {"seed": payload.seed, "vehicles": payload.vehicles, "rows": parsed["count"]}, result
+        "import",
+        {
+            "seed": payload.seed,
+            "vehicles": payload.vehicles,
+            "rows": parsed["count"],
+            # fingerprint nội dung để hai file CSV khác nhau không bị gộp nhầm
+            "csv_sha256": hashlib.sha256(payload.csv.encode("utf-8")).hexdigest()[:16],
+        },
+        result,
     )
     return result
 
@@ -528,5 +537,6 @@ def index():
 
 if WEB_DIR.exists():
     app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
+
 
 

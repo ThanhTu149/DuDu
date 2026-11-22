@@ -91,6 +91,33 @@ class TestRoutingOnScenario(unittest.TestCase):
         self.assertEqual(new_sequence, best)
         self.assertEqual(new_improvements, improvements)
 
+    def test_eta_multiplier_uses_hour_of_day(self) -> None:
+        """Hệ số ùn tắc phải lấy theo giờ trong ngày, không phải số phút kể từ 00:00."""
+        if not self.dests:
+            self.skipTest("xe không có đơn")
+
+        class FakeEta:
+            def hour_factor(self, hour: int) -> float:
+                return 2.0 if int(hour) % 24 == 8 else 1.0
+
+        start = self.vehicle["start_hub"]
+        speed = self.vehicle["speed_factor"]
+        sequence = self.dests[:1]
+        base = sequence_score(self.net, start, sequence, speed)
+        scaled = sequence_score(self.net, start, sequence, speed, eta_model=FakeEta())
+        # BASE_MINUTE = 08:00 nên chặng đầu phải bị nhân 2
+        self.assertAlmostEqual(scaled, base * 2.0, places=6)
+
+        route = schedule_route(
+            self.net, self.vehicle, self.assignment[self.vehicle["id"]][:1],
+            strategy="nearest", start_min=BASE_MINUTE, eta_model=FakeEta(),
+        )
+        plain = schedule_route(
+            self.net, self.vehicle, self.assignment[self.vehicle["id"]][:1],
+            strategy="nearest", start_min=BASE_MINUTE,
+        )
+        self.assertAlmostEqual(route.legs[0]["min"], plain.legs[0]["min"] * 2.0, places=1)
+
     def test_route_length_matches_sum_of_legs(self) -> None:
         # route_length trả về tổng thời gian di chuyển (phút), chưa gồm thời gian phục vụ
         hubs = [self.vehicle["start_hub"]] + [hub for _, hub in self.dests]
