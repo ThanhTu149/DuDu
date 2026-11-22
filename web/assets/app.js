@@ -8,7 +8,15 @@ const W = 1000;
 const H = 640;
 const PAD = 56;
 
-const ROUTE_COLORS = ["#c9490e", "#2c6b52", "#2f5d8c", "#8a6100", "#6b3f8c", "#a3402d", "#2f7c7c", "#5c6b2f"];
+const ROUTE_FALLBACK = ["#c9490e", "#2c6b52", "#2f5d8c", "#8a6100", "#6b3f8c", "#a3402d", "#2f7c7c", "#5c6b2f"];
+// Màu tuyến đọc từ biến CSS (nguồn duy nhất: docs/design-system/tokens.json → :root)
+const ROUTE_COLORS = (() => {
+  const styles = getComputedStyle(document.documentElement);
+  return ROUTE_FALLBACK.map((fallback, index) => {
+    const value = styles.getPropertyValue(`--route-${index + 1}`).trim();
+    return value || fallback;
+  });
+})();
 
 const state = {
   hubs: [],
@@ -58,6 +66,7 @@ function applyView() {
   $("#map").setAttribute("viewBox", `${v.x.toFixed(1)} ${v.y.toFixed(1)} ${v.w.toFixed(1)} ${v.h.toFixed(1)}`);
   const note = $("#map-note");
   if (note) note.textContent = `zoom ${((state.fitW || v.w) / v.w).toFixed(1)}×`;
+  updateMarkerScale();
 }
 
 function fitView() {
@@ -494,6 +503,21 @@ function drawIncidentMarker(svg) {
   text.textContent = label;
   layer.appendChild(text);
   svg.appendChild(layer);
+  state.incidentMarker = { group: layer, x: point[0], y: point[1] };
+  updateMarkerScale();
+}
+
+function updateMarkerScale() {
+  // Giữ marker luôn ~26px trên màn hình: quy đổi từ pixel sang đơn vị thế giới của viewBox
+  const marker = state.incidentMarker;
+  if (!marker || !state.view) return;
+  const rect = $("#map").getBoundingClientRect();
+  const pxPerWorld = Math.max(rect.width / state.view.w, 0.001);
+  const scale = Math.min(4, Math.max(0.2, 26 / (44 * pxPerWorld)));
+  marker.group.setAttribute(
+    "transform",
+    `translate(${marker.x.toFixed(2)} ${marker.y.toFixed(2)}) scale(${scale.toFixed(3)}) translate(${(-marker.x).toFixed(2)} ${(-marker.y).toFixed(2)})`
+  );
 }
 
 function refineGeometry() {
@@ -638,7 +662,7 @@ function renderRoutes(routes) {
         <span class="route-dot" style="background:${color}"></span>
         <div>
           <div class="route-driver">${route.driver}</div>
-          <div class="route-sub"><span class="route-plate">${route.plate}</span> ${vehicle.label}</div>
+          <div class="route-sub"><span class="route-plate">${route.plate}</span><span class="ic route-veh" style="--icon:url('/assets/icons/${vehicle.kind === "xe_may" ? "scooter" : "truck"}.svg')"></span>${vehicle.label}</div>
         </div>
         <span class="route-meta">${route.stops.length} điểm · ${fmtKm(route.total_km)} km</span>
       </div>
@@ -670,7 +694,10 @@ function renderSteps(steps) {
   const list = $("#steps");
   list.innerHTML = "";
   if (!steps?.length) {
-    list.innerHTML = '<li class="empty">Chưa chạy.</li>';
+    list.innerHTML = `<li class="steps-empty">
+      <img src="/assets/stickers/dudu.png" alt="DuDu" />
+      <span>Biệt đội chưa chạy — bấm <b>Lập kế hoạch</b> để xem các bước suy luận tại đây.</span>
+    </li>`;
     return;
   }
   for (const step of steps) {
@@ -729,7 +756,7 @@ function renderViolations(violations, initial) {
       return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" role="button" aria-label="Xem trên bản đồ">
         <span class="v-id">${violation.rule_id}</span>
         <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}${who ? ` · ${who}` : ""}</span></span>
-        <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+        <span class="v-level ${violation.level}"><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span>${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
         <span class="v-pin" aria-hidden="true">↗</span>
       </div>`;
     })
@@ -847,7 +874,7 @@ function openOrder(orderId, route, options = {}) {
     ? rules.map((violation) => `<div class="drawer-rule">
          <b>${violation.rule_id} — ${violation.title}</b>
          <span>${violation.detail}</span>
-         <span class="v-level ${violation.level}">${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
+         <span class="v-level ${violation.level}"><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span>${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
         <span class="v-pin" aria-hidden="true">↗</span>
        </div>`).join("")
     : '<p class="empty" style="margin:0">Không có luật nào kích hoạt trên đơn này.</p>';
@@ -1024,7 +1051,12 @@ function openOrders() {
           : row.status === "đúng" ? '<span class="badge-ok">đúng</span>'
           : '<span class="badge-none">chưa xếp</span>'}</td>
         <td class="mono">${row.driver}</td>
-      </tr>`).join("") : '<tr><td colspan="9" class="orders-empty">Không có đơn nào khớp bộ lọc.</td></tr>';
+      </tr>`).join("") : `<tr><td colspan="9">
+        <div class="drawer-empty">
+          <img src="/assets/stickers/gau-nau.png" alt="Gấu Nâu" />
+          <p>Không tìm thấy đơn hàng khớp bộ lọc</p>
+        </div>
+      </td></tr>`;
 
     document.querySelectorAll(".orders-table th").forEach((th) => {
       th.classList.toggle("is-sorted", th.dataset.key === key);
@@ -1535,6 +1567,7 @@ async function loadEtaInfo() {
   $("#mascot-fold").addEventListener("click", () => setMascotFolded(true));
   $("#mascot-pill").addEventListener("click", () => setMascotFolded(false));
   window.addEventListener("resize", syncMascotWidth);
+  window.addEventListener("resize", updateMarkerScale);
   syncMascotWidth();
   $("#brand-title").addEventListener("click", openIntro);
   $("#intro-close").addEventListener("click", () => closeIntro(true));
@@ -1562,6 +1595,10 @@ async function loadEtaInfo() {
     else if (event.key === "-") zoomAt(1.25);
   });
 })();
+
+
+
+
 
 
 

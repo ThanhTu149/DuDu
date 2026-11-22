@@ -17,6 +17,14 @@
   --alert: #b3261e;
   --alert-soft: #f8dfdc;
   --amber: #d99a06;
+  --route-1: #c9490e;
+  --route-2: #2c6b52;
+  --route-3: #2f5d8c;
+  --route-4: #8a6100;
+  --route-5: #6b3f8c;
+  --route-6: #a3402d;
+  --route-7: #2f7c7c;
+  --route-8: #5c6b2f;
   --kit: 8px;
   --r: 10px;
   --mono: "JetBrains Mono", "Cascadia Mono", "Consolas", ui-monospace, monospace;
@@ -963,7 +971,7 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
   --ink: #1c1917;
   --ink-2: #57534e;
   --ink-3: #6f6a63;
-  --line: #d9d2c4;
+  --line: #ddd7cb;
 }
 
 /* chữ phụ đậm hơn để chiếu máy chiếu không bạc */
@@ -1126,3 +1134,34 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 .inc-pin { pointer-events: none; filter: drop-shadow(0 3px 6px rgba(21,23,28,.28)); }
 .intro-sticker { width: 40px; height: 40px; object-fit: contain; display: block; margin-bottom: 2px; }
 .intro-sm { position: relative; }
+
+
+/* ============ v13: icon currentColor, sticker, marker co giãn theo zoom ============ */
+.ic {
+  display: inline-block; width: 14px; height: 14px; flex: none;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.ic-sm { width: 11px; height: 11px; }
+.panel-ico { color: var(--accent); margin-right: 6px; }
+.map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.map-legend .ic { width: 13px; height: 13px; color: var(--ink-2); }
+.pop-check { display: inline-flex; align-items: center; gap: 7px; }
+.pop-check .ic { color: var(--accent); }
+.route-sub { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.route-veh { width: 13px; height: 13px; color: var(--ink-3); margin: 0 4px 0 2px; }
+.v-level .ic { width: 10px; height: 10px; margin-right: 3px; vertical-align: -1px; }
+.intro-sm { padding-right: 64px; min-height: 62px; position: relative; }
+.intro-sm .intro-sticker {
+  position: absolute; top: 8px; right: 8px; width: 48px; height: 48px;
+  object-fit: contain; margin: 0; filter: drop-shadow(0 4px 8px rgba(21,23,28,.10));
+}
+.drawer-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 40px 0; color: var(--ink-2); font-size: 13px;
+}
+.drawer-empty img { width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(21,23,28,.14)); }
+.steps-empty { display: flex; align-items: center; gap: 10px; padding: 14px 16px; color: var(--ink-2); font-size: 12.5px; }
+.steps-empty img { width: 42px; height: 42px; object-fit: contain; }
+

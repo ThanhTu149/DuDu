@@ -352,3 +352,44 @@ nền trong suốt.
 - Bản đồ: marker sự cố dùng pin SVG thay cho hai vòng tròn đồng tâm, giữ nguyên vòng pulse.
 
 `tools/make_stickers.py` là mã nguồn của bước tách nền, chạy lại được bất cứ lúc nào.
+
+## 18. Bản v13 — gắn bộ tài sản vào giao diện
+
+Mọi tài sản trong `web/assets/` đều đã được dùng thật, không còn nằm chết trong thư mục.
+
+### Marker sự cố
+
+- Ba ghim SVG `xe-hong / ket-xe / kho-dong` thay chấm tròn cũ; pin đỏ, viền kem, icon trắng.
+- **Kích thước không đổi khi zoom**: mỗi lần `applyView` gọi `updateMarkerScale()`, quy đổi
+  từ pixel sang đơn vị viewBox để marker luôn rộng **~26px** trên màn hình (đo được 22px ở
+  1366×768 và 24px ở 1920×1080, giữ nguyên khi phóng to 2 nấc).
+- Vẫn giữ vòng pulse và nhãn chữ (XE HỎNG / KẸT XE / KHO ĐÓNG).
+
+### Bộ 8 icon giao vận
+
+Icon SVG tô màu bằng `currentColor` thông qua kỹ thuật CSS `mask`, nên một tệp dùng được
+nhiều màu khác nhau mà không phải xuất thêm bản:
+
+| Vị trí | Icon |
+|---|---|
+| Thẻ tuyến theo tài xế | `scooter` cho xe máy, `truck` cho xe tải nhỏ / 1.5 tấn, đặt cạnh biển số |
+| Chú thích bản đồ | `warehouse` (kho/cảng), `package` (bưu cục), `route` (điểm giao), `warning` (trễ hẹn) |
+| Cấu hình giả lập | `clock` cạnh nhãn ETA mô hình |
+| Tiêu đề 3 panel | `route` (tuyến), `chip` (tác tử), `warning` (cơ sở luật) |
+| Badge mức luật | `warning` trong pill chặn / cảnh báo |
+
+### Sticker nhân vật
+
+| Sticker | Vai trò |
+|---|---|
+| `gau-trang` | Thẻ “01 Tối ưu tuyến đường” trong modal giới thiệu (48px, góc trên-phải) |
+| `gau-truc` | Thẻ “02 Dự đoán ETA” |
+| `gau-nau` | Thẻ “03 Phân bổ đơn hàng” + **empty state** của Drawer Danh sách đơn (“Không tìm thấy đơn hàng khớp bộ lọc”) |
+| `dudu` | Empty state của panel Quyết định của tác tử khi chưa lập kế hoạch (42px) |
+
+### Đồng bộ token
+
+- 22 biến màu trong `:root` khớp 100% với `docs/design-system/tokens.json` (kiểm bằng script
+  đối chiếu tự động).
+- Bổ sung `--route-1…--route-8`; `ROUTE_COLORS` trong JS giờ **đọc từ biến CSS** thay vì
+  hard-code, nên sửa token là màu tuyến đổi theo.

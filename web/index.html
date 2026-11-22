@@ -69,7 +69,7 @@
             </div>
             <label class="pop-check">
               <input id="use-ml" type="checkbox" />
-              <span id="eta-label">ETA mô hình</span>
+              <span class="ic ic-sm" style="--icon:url('/assets/icons/clock.svg')"></span><span id="eta-label">ETA mô hình</span>
             </label>
             <p class="pop-note" id="scenario-meta">—</p>
           </div>
@@ -143,17 +143,17 @@
           </div>
         </div>
         <div class="map-legend">
-          <span><i class="swatch sw-depot"></i>Kho / cảng</span>
-          <span><i class="swatch sw-hub"></i>Bưu cục</span>
-          <span><i class="swatch sw-stop"></i>Điểm giao — màu theo tuyến</span>
-          <span><i class="swatch sw-late"></i>Trễ hẹn — viền đỏ</span>
+          <span><i class="swatch sw-depot"></i><span class="ic" style="--icon:url('/assets/icons/warehouse.svg')"></span>Kho / cảng</span>
+          <span><i class="swatch sw-hub"></i><span class="ic" style="--icon:url('/assets/icons/package.svg')"></span>Bưu cục</span>
+          <span><i class="swatch sw-stop"></i><span class="ic" style="--icon:url('/assets/icons/route.svg')"></span>Điểm giao — màu theo tuyến</span>
+          <span><i class="swatch sw-late"></i><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span>Trễ hẹn — viền đỏ</span>
           
         </div>
       </section>
 
       <aside class="panel side-panel">
         <div class="side-head">
-          <h2>Tuyến theo tài xế</h2>
+          <span class="ic panel-ico" style="--icon:url('/assets/icons/route.svg')"></span><h2>Tuyến theo tài xế</h2>
           <span id="route-count" class="pill">0 tuyến</span>
         </div>
 
@@ -185,6 +185,7 @@
       <div class="log-col">
         <div class="panel-head">
           <span class="agent-badge" aria-hidden="true"><img src="/assets/avatar.jpg" alt="" /><i></i></span>
+          <span class="ic panel-ico" style="--icon:url('/assets/icons/chip.svg')"></span>
           <h2>Quyết định của tác tử</h2>
           <div class="tabs" role="tablist">
             <button class="tab is-active" data-tab="steps" role="tab" aria-selected="true">Nhật ký</button>
@@ -192,12 +193,12 @@
           </div>
           <button id="log-toggle" class="btn-quiet log-toggle" aria-expanded="true">Thu gọn</button>
         </div>
-        <ol id="steps" class="steps"><li class="empty">Chưa chạy.</li></ol>
+        <ol id="steps" class="steps"><li class="steps-empty"><img src="/assets/stickers/dudu.png" alt="DuDu" /><span>Biệt đội chưa chạy — bấm <b>Lập kế hoạch</b> để xem các bước suy luận tại đây.</span></li></ol>
         <div id="gantt" class="gantt" hidden></div>
       </div>
       <div class="log-col">
         <div class="panel-head">
-          <h2>Đối chiếu cơ sở luật</h2>
+          <span class="ic panel-ico" style="--icon:url('/assets/icons/warning.svg')"></span><h2>Đối chiếu cơ sở luật</h2>
           <div class="tabs" id="rule-filters" role="group" aria-label="Lọc mức luật">
             <button class="tab is-active" data-filter="all">Tất cả</button>
             <button class="tab" data-filter="chan">Chặn</button>
@@ -255,6 +256,8 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
+
 
 
 
