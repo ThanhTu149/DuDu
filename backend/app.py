@@ -1,15 +1,31 @@
-"""API của DuDu — bốn module thuật toán phơi ra cho giao diện gọi."""
+"""API của DuDu — bốn module thuật toán phơi ra cho giao diện gọi.
+
+Mọi endpoint đều kiểm tra dữ liệu vào bằng Pydantic trước khi chạy thuật toán:
+- số đơn / số xe / seed có biên rõ ràng (chặn một request làm treo máy chủ),
+- tên chiến lược chia đơn & xếp tuyến phải nằm trong danh sách cho phép,
+- mã xe / mã nút trong sự cố phải tồn tại.
+
+Phần nặng được cache có giới hạn: kịch bản theo (seed, số đơn, số xe) và kế hoạch "trước
+sự cố" theo cùng bộ ba + chiến lược, nên bấm sự cố liên tiếp không phải tính lại từ đầu.
+"""
 
 from __future__ import annotations
 
 import json
-import random
+import logging
+import os
+import threading
+import time
+from contextlib import asynccontextmanager
+from collections import OrderedDict
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 
 from .dispatch.agent import DispatcherAgent
 from .dispatch.evaluate import compare_routing, compare_strategies
@@ -18,11 +34,56 @@ from .dispatch.routing import BASE_MINUTE, clock_label
 from .dispatch.rules import RULES
 from .dispatch.scenario import build_scenario
 
+logger = logging.getLogger("dudu.api")
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
 GEOMETRY_CACHE = ROOT / "data" / "processed" / "geometry.json"
+ETA_MODEL_FILE = ROOT / "ml" / "models" / "eta_rf.joblib"
+ETA_METRICS_FILE = ROOT / "ml" / "models" / "eta_metrics.json"
 
-app = FastAPI(title="DuDu Dispatch API", version="0.1.0")
+# Biên dữ liệu vào — dùng chung cho mọi endpoint để không chỗ nào lỏng hơn chỗ khác.
+ORDERS_MIN, ORDERS_MAX = 8, 200
+VEHICLES_MIN, VEHICLES_MAX = 2, 8
+SEED_MIN, SEED_MAX = 1, 9_999
+SCENARIO_CACHE_SIZE = 64
+BEFORE_CACHE_SIZE = 64
+STARTED_AT = time.time()
+
+AssignmentName = Literal["hungarian", "greedy", "savings", "random"]
+RoutingName = Literal["deadline", "nearest", "two_opt", "random", "savings", "savings_2opt"]
+IncidentKind = Literal["breakdown", "congestion", "depot_closed", "truck_ban"]
+EtaSource = Literal["osrm", "ml"]
+
+
+class PlanRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    seed: int = Field(7, ge=SEED_MIN, le=SEED_MAX)
+    orders: int = Field(48, ge=ORDERS_MIN, le=ORDERS_MAX)
+    vehicles: int = Field(8, ge=VEHICLES_MIN, le=VEHICLES_MAX)
+    assignment: AssignmentName = "hungarian"
+    routing: RoutingName = "deadline"
+    eta: EtaSource = "osrm"
+
+
+class IncidentRequest(PlanRequest):
+    kind: IncidentKind = "breakdown"
+    vehicle_id: str | None = Field(None, max_length=64)
+    hub_id: str | None = Field(None, max_length=64)
+    # /api/incident trước đây nhận đủ bộ ba seed/orders/vehicles như plan
+    orders: int = Field(48, ge=ORDERS_MIN, le=ORDERS_MAX)
+    vehicles: int = Field(8, ge=VEHICLES_MIN, le=VEHICLES_MAX)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Nạp sẵn mô hình ETA ở luồng nền để request đầu tiên không bị chậm."""
+    threading.Thread(target=eta_model, name="eta-warmup", daemon=True).start()
+    yield
+
+
+app = FastAPI(title="DuDu Dispatch API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,36 +92,114 @@ app.add_middleware(
 )
 
 net = load_network()
-_scenarios: dict[tuple[int, int, int], dict] = {}
+_scenarios: OrderedDict[tuple[int, int, int], dict] = OrderedDict()
+_before_metrics: OrderedDict[tuple[int, int, int, str, str], dict] = OrderedDict()
 _eta_model = None
+_locks = {
+    "scenario": threading.Lock(),
+    "eta": threading.Lock(),
+    "before": threading.Lock(),
+    "geometry": threading.Lock(),
+}
+
 
 
 def eta_model():
-    """Nạp mô hình ETA một lần; nếu chưa huấn luyện thì trả None (hệ thống vẫn chạy)."""
+    """Nạp mô hình ETA một lần (có khoá); thiếu mô hình thì trả None, hệ thống vẫn chạy."""
     global _eta_model
-    if _eta_model is None:
-        try:
-            import sys
+    if _eta_model is not None:
+        return _eta_model or None
+    with _locks["eta"]:
+        if _eta_model is None:
+            try:
+                import sys
 
-            sys.path.insert(0, str(ROOT))
-            from ml.eta_model import EtaModel
+                if str(ROOT) not in sys.path:
+                    sys.path.insert(0, str(ROOT))
+                from ml.eta_model import EtaModel
 
-            _eta_model = EtaModel.load() or False
-        except Exception:  # noqa: BLE001 — thiếu model không được làm sập API
-            _eta_model = False
+                _eta_model = EtaModel.load() or False
+            except Exception:  # noqa: BLE001 — thiếu model không được làm sập API
+                logger.warning("Không nạp được mô hình ETA, dùng OSRM", exc_info=True)
+                _eta_model = False
     return _eta_model or None
+
+
+def eta_available() -> bool:
+    """Có mô hình trên đĩa không — kiểm tra không cần nạp (health phải trả lời tức thì)."""
+    if _eta_model is not None:
+        return bool(_eta_model)
+    return ETA_MODEL_FILE.exists() and ETA_METRICS_FILE.exists()
 
 
 def _scenario(seed: int, orders: int, vehicles: int) -> dict:
     key = (seed, orders, vehicles)
-    if key not in _scenarios:
-        _scenarios[key] = build_scenario(net, seed=seed, n_orders=orders, n_vehicles=vehicles)
-    return _scenarios[key]
+    with _locks["scenario"]:
+        if key in _scenarios:
+            _scenarios.move_to_end(key)
+            return _scenarios[key]
+        data = build_scenario(net, seed=seed, n_orders=orders, n_vehicles=vehicles)
+        _scenarios[key] = data
+        while len(_scenarios) > SCENARIO_CACHE_SIZE:
+            _scenarios.popitem(last=False)
+        return data
+
+
+def _copy_scenario(data: dict) -> tuple[list[dict], list[dict]]:
+    """Thuật toán có thể sắp xếp/tiêu thụ danh sách — luôn đưa bản sao, giữ cache nguyên vẹn."""
+    return [dict(v) for v in data["vehicles"]], [dict(o) for o in data["orders"]]
+
+
+def _baseline_metrics(data: dict, assignment: str, routing: str) -> dict:
+    key = (data["seed"], len(data["orders"]), len(data["vehicles"]), assignment, routing)
+    with _locks["before"]:
+        if key in _before_metrics:
+            _before_metrics.move_to_end(key)
+            return _before_metrics[key]
+        vehicles, orders = _copy_scenario(data)
+        metrics = DispatcherAgent(
+            net,
+            vehicles,
+            orders,
+            assignment_strategy=assignment,
+            routing_strategy=routing,
+        ).plan()["metrics"]
+        _before_metrics[key] = metrics
+        while len(_before_metrics) > BEFORE_CACHE_SIZE:
+            _before_metrics.popitem(last=False)
+        return metrics
+
+
+def _validation_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=400, detail=detail)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception(request: Request, exc: Exception) -> JSONResponse:
+    """Không trả stack trace ra ngoài; log lại để người phát triển đọc."""
+    logger.exception("Lỗi không xử lý ở %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Lỗi nội bộ máy chủ", "type": type(exc).__name__, "path": request.url.path},
+    )
 
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "hubs": len(net.order), "rules": len(RULES)}
+    return {
+        "ok": True,
+        "version": app.version,
+        "hubs": len(net.order),
+        "rules": len(RULES),
+        "eta_model": eta_available(),
+        "eta_loaded": _eta_model is not None,
+        "uptime_s": round(time.time() - STARTED_AT, 1),
+        "limits": {
+            "orders": [ORDERS_MIN, ORDERS_MAX],
+            "vehicles": [VEHICLES_MIN, VEHICLES_MAX],
+            "seed": [SEED_MIN, SEED_MAX],
+        },
+    }
 
 
 @app.get("/api/hubs")
@@ -80,29 +219,37 @@ def hubs() -> dict:
 
 
 @app.get("/api/scenario")
-def scenario(seed: int = 7, orders: int = Query(48, ge=8, le=200), vehicles: int = Query(8, ge=2, le=8)) -> dict:
+def scenario(
+    seed: int = Query(7, ge=SEED_MIN, le=SEED_MAX),
+    orders: int = Query(48, ge=ORDERS_MIN, le=ORDERS_MAX),
+    vehicles: int = Query(8, ge=VEHICLES_MIN, le=VEHICLES_MAX),
+) -> dict:
     data = _scenario(seed, orders, vehicles)
     return {**data, "start_label": clock_label(BASE_MINUTE)}
 
 
 @app.post("/api/plan")
-def plan(payload: dict | None = None) -> dict:
-    payload = payload or {}
-    seed = int(payload.get("seed", 7))
-    orders = int(payload.get("orders", 48))
-    vehicles = int(payload.get("vehicles", 8))
-    data = _scenario(seed, orders, vehicles)
-    agent = DispatcherAgent(
+def plan(payload: PlanRequest | None = None) -> dict:
+    request = payload or PlanRequest()
+    data = _scenario(request.seed, request.orders, request.vehicles)
+    vehicles, orders = _copy_scenario(data)
+    model = eta_model() if request.eta == "ml" else None
+    result = DispatcherAgent(
         net,
-        data["vehicles"],
-        data["orders"],
-        assignment_strategy=payload.get("assignment", "hungarian"),
-        routing_strategy=payload.get("routing", "deadline"),
-        eta_model=eta_model() if payload.get("eta", "osrm") == "ml" else None,
-    )
-    result = agent.plan()
-    result["seed"] = seed
+        vehicles,
+        orders,
+        assignment_strategy=request.assignment,
+        routing_strategy=request.routing,
+        eta_model=model,
+    ).plan()
+    result["seed"] = request.seed
     result["start_label"] = clock_label(BASE_MINUTE)
+    result["warnings"] = []
+    if request.eta == "ml" and model is None:
+        result["warnings"].append(
+            "Chưa có mô hình ETA trên máy này — kế hoạch đang tính theo OSRM free-flow. "
+            "Chạy python ml/train_eta.py để bật hiệu chỉnh ùn tắc."
+        )
     return result
 
 
@@ -115,7 +262,11 @@ def eta_info() -> dict:
 
 
 @app.get("/api/eta/predict")
-def eta_predict(distance_km: float = Query(..., gt=0, le=60), hour: int = Query(8, ge=0, le=23), weekday: int = Query(2, ge=0, le=6)) -> dict:
+def eta_predict(
+    distance_km: float = Query(..., gt=0, le=60),
+    hour: int = Query(8, ge=0, le=23),
+    weekday: int = Query(2, ge=0, le=6),
+) -> dict:
     model = eta_model()
     if model is None:
         raise HTTPException(503, "chưa có mô hình ETA")
@@ -132,37 +283,52 @@ def eta_predict(distance_km: float = Query(..., gt=0, le=60), hour: int = Query(
 
 
 @app.post("/api/incident")
-def incident(payload: dict) -> dict:
+def incident(payload: IncidentRequest) -> dict:
     """Gây sự cố rồi để tác tử xử lý; trả về số liệu trước và sau để so sánh."""
-    kind = payload.get("kind", "breakdown")
-    vehicle_id = payload.get("vehicle_id")
-    hub_id = payload.get("hub_id")
-    seed = int(payload.get("seed", 7))
-    data = _scenario(seed, int(payload.get("orders", 48)), int(payload.get("vehicles", 8)))
-    options = {
-        "assignment_strategy": payload.get("assignment", "hungarian"),
-        "routing_strategy": payload.get("routing", "deadline"),
-    }
+    data = _scenario(payload.seed, payload.orders, payload.vehicles)
+    vehicle_ids = {vehicle["id"] for vehicle in data["vehicles"]}
+    vehicle_id = payload.vehicle_id
+    hub_id = payload.hub_id
 
-    if kind == "depot_closed" and not hub_id:
+    if payload.kind in ("breakdown", "truck_ban"):
+        if not vehicle_id:
+            raise _validation_error(
+                f"Sự cố {payload.kind} cần vehicle_id. Các xe hiện có: {', '.join(sorted(vehicle_ids))}"
+            )
+        if vehicle_id not in vehicle_ids:
+            raise _validation_error(f"vehicle_id '{vehicle_id}' không có trong kịch bản. Chọn một trong: {', '.join(sorted(vehicle_ids))}")
+
+    if hub_id is not None and hub_id not in net.hubs:
+        raise _validation_error(f"hub_id '{hub_id}' không tồn tại trong mạng 16 nút.")
+
+    if payload.kind == "depot_closed" and not hub_id:
         counts: dict[str, int] = {}
         for vehicle in data["vehicles"]:
             counts[vehicle["start_hub"]] = counts.get(vehicle["start_hub"], 0) + 1
         hub_id = max(counts, key=counts.get)
 
-    before = DispatcherAgent(net, data["vehicles"], data["orders"], **options).plan()["metrics"]
-
-    agent = DispatcherAgent(net, data["vehicles"], data["orders"], **options)
-    result = agent.handle_incident(kind, vehicle_id, hub_id)
+    before = _baseline_metrics(data, payload.assignment, payload.routing)
+    vehicles, orders = _copy_scenario(data)
+    result = DispatcherAgent(
+        net,
+        vehicles,
+        orders,
+        assignment_strategy=payload.assignment,
+        routing_strategy=payload.routing,
+    ).handle_incident(payload.kind, vehicle_id, hub_id)
     return {
         "before": before,
-        "incident": {"kind": kind, "vehicle_id": vehicle_id, "hub_id": hub_id},
+        "incident": {"kind": payload.kind, "vehicle_id": vehicle_id, "hub_id": hub_id},
         **result,
     }
 
 
 @app.get("/api/compare")
-def compare(seed: int = 7, orders: int = Query(48, ge=8, le=200), vehicles: int = Query(8, ge=2, le=8)) -> dict:
+def compare(
+    seed: int = Query(7, ge=SEED_MIN, le=SEED_MAX),
+    orders: int = Query(48, ge=ORDERS_MIN, le=ORDERS_MAX),
+    vehicles: int = Query(8, ge=VEHICLES_MIN, le=VEHICLES_MAX),
+) -> dict:
     data = _scenario(seed, orders, vehicles)
     return {
         "assignment": compare_strategies(net, data),
@@ -185,16 +351,31 @@ def geometry(a: str, b: str) -> dict:
     """Đường đi thật giữa hai nút để vẽ tuyến. Có cache trên đĩa, chỉ gọi OSRM một lần."""
     if a not in net.hubs or b not in net.hubs:
         raise HTTPException(404, "nút không tồn tại")
-    cache: dict = json.loads(GEOMETRY_CACHE.read_text(encoding="utf-8")) if GEOMETRY_CACHE.exists() else {}
     key = f"{a}->{b}"
-    if key not in cache:
-        from data.build_matrix import leg_geometry
+    with _locks["geometry"]:
+        cache: dict = {}
+        if GEOMETRY_CACHE.exists():
+            try:
+                cache = json.loads(GEOMETRY_CACHE.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                logger.warning("File cache hình học hỏng, tạo lại từ đầu")
+                cache = {}
+        if key in cache:
+            return cache[key]
+        try:
+            from data.build_matrix import leg_geometry
 
-        hub_a, hub_b = net.hub(a), net.hub(b)
-        cache[key] = leg_geometry((hub_a.lat, hub_a.lon), (hub_b.lat, hub_b.lon))
+            hub_a, hub_b = net.hub(a), net.hub(b)
+            payload = leg_geometry((hub_a.lat, hub_a.lon), (hub_b.lat, hub_b.lon))
+        except Exception as exc:  # noqa: BLE001 — OSRM công cộng có thể chặn / mất mạng
+            logger.warning("Không lấy được hình học %s: %s", key, exc)
+            raise HTTPException(502, "không lấy được đường đi từ OSRM, thử lại sau") from exc
+        cache[key] = payload
         GEOMETRY_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        GEOMETRY_CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
-    return cache[key]
+        tmp = GEOMETRY_CACHE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, GEOMETRY_CACHE)
+        return payload
 
 
 @app.get("/")
@@ -207,3 +388,5 @@ def index():
 
 if WEB_DIR.exists():
     app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
+
+

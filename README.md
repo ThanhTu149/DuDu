@@ -59,10 +59,11 @@ python -m uvicorn backend.app:app --reload --port 8000
 Repo có bộ kiểm thử cho phần lõi (không cần cài mô hình, không gọi mạng):
 
 ```powershell
+pip install -r requirements.txt -r requirements-dev.txt   # dev cần httpx cho test HTTP
 python -m unittest discover -s tests -v
 ```
 
-44 ca kiểm thử trong `tests/` phủ bốn nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
+69 ca kiểm thử trong `tests/` phủ năm nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
 đi vòng khi chặng bị chặn), bài toán gán Hungarian (đối chiếu với vét cạn), xếp tuyến
 (2-opt không bao giờ làm xấu kết quả, tổng km khớp), và tác tử + API + toàn vẹn dữ liệu.
 GitHub Actions chạy lại toàn bộ ở mỗi lần push: `.github/workflows/ci.yml`.
@@ -115,6 +116,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

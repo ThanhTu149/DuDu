@@ -43,14 +43,44 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
 
 | Endpoint | Việc |
 |---|---|
-| `GET /api/health` | kiểm tra sống, số nút, số luật |
+| `GET /api/health` | sống/chết, số nút, số luật, mô hình ETA có sẵn, uptime, biên dữ liệu |
 | `GET /api/hubs` | 16 nút + khung bao để vẽ bản đồ |
-| `GET /api/scenario?seed&orders` | kịch bản tái lập được |
-| `POST /api/plan` | chạy tác tử: tuyến, số liệu, vi phạm, nhật ký |
-| `POST /api/incident` | sự cố xe hỏng / kẹt xe (A* đi vòng) / kho đóng → chia lại |
-| `GET /api/compare` | bảng so sánh chiến lược cho báo cáo |
-| `GET /api/rules` | danh sách luật để hiển thị |
-| `GET /api/geometry?a&b` | đường đi thật giữa 2 nút (có cache) |
+| `GET /api/scenario?seed&orders&vehicles` | kịch bản tái lập được (cache theo bộ ba tham số) |
+| `POST /api/plan` | chạy tác tử: tuyến, số liệu, vi phạm, nhật ký; trả thêm `warnings` |
+| `POST /api/incident` | sự cố xe hỏng / kẹt xe (A* đi vòng) / kho đóng / cấm tải → chia lại |
+| `GET /api/compare?seed&orders` | bảng so sánh chiến lược chia đơn và xếp tuyến |
+| `GET /api/rules` | 12 luật kèm mức và độ ưu tiên |
+| `GET /api/eta/info` | thông tin mô hình ETA (MAE, số dòng, hệ số ùn tắc) |
+| `GET /api/eta/predict?distance_km&hour&weekday` | dự đoán ETA cho một chặng |
+| `GET /api/geometry?a&b` | đường đi thật giữa 2 nút (cache đĩa, khoá ghi) |
+
+## Kiểm tra dữ liệu vào
+
+Mọi endpoint POST dùng **Pydantic** để chặn dữ liệu sai trước khi chạy thuật toán:
+
+| Quy tắc | Giá trị | Trả về khi sai |
+|---|---|---|
+| `orders` | 8–200 | 422 |
+| `vehicles` | 2–8 | 422 |
+| `seed` | 1–9999 | 422 |
+| `assignment` | hungarian / greedy / savings / random | 422 |
+| `routing` | deadline / nearest / two_opt / random / savings / savings_2opt | 422 |
+| `eta` | osrm / ml | 422 |
+| `kind` sự cố | breakdown / congestion / depot_closed / truck_ban | 422 |
+| `vehicle_id`, `hub_id` | phải tồn tại trong kịch bản/mạng | 400 kèm danh sách hợp lệ |
+
+Lỗi không lường trước được bọc trong một handler chung: trả `{"detail": "Lỗi nội bộ máy chủ",
+"type": ...}` và ghi log, không đẩy stack trace ra ngoài.
+
+## Hiệu năng & cache
+
+- Kịch bản theo `(seed, orders, vehicles)` cache **64** mục; kế hoạch "trước sự cố" theo
+  `(seed, orders, vehicles, assignment, routing)` cache **64** mục → bấm sự cố liên tiếp
+  không phải tính lại kế hoạch gốc.
+- Mô hình ETA nạp ở **luồng nền lúc khởi động** (lifespan) và lưu không nén: nạp ~0,2 giây
+  thay vì 2–3 giây; `/api/health` chỉ kiểm tra tệp có tồn tại, không nạp mô hình.
+- Đo trên máy phát triển (48 đơn, 8 xe): `/api/plan` 20–40 ms (riêng 96 đơn ~180 ms),
+  `/api/incident` 20–65 ms, `/api/compare` ~260 ms, `/api/eta/predict` ~90 ms.
 
 ## Ghi chú kỹ thuật
 
@@ -68,4 +98,5 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
   sức chứa theo từng xe; bước sửa chuyển đơn nhỏ nhất sang xe còn chỗ.
 - **Vì sao đơn được làm tròn về nút mạng?** 16 nút đại diện cho 16 khu vực; toạ độ thật của
   đơn lệch trong bán kính ~1 km để bản đồ không chồng điểm, còn định tuyến dùng nút.
+
 

@@ -60,6 +60,12 @@ Hai giao thức chênh nhau ≤ 0,06 phút MAE → kết luận không phụ thu
 Random Forest giảm 24% MAE so với hồi quy tuyến tính. Gradient Boosting chỉ nhỉnh hơn
 0,06 phút → mô hình cây đã đủ tốt, không cần thêm mô hình nặng.
 
+## Lưu mô hình để API nạp nhanh
+
+`eta_rf.joblib` được lưu **không nén** (`compress=0`): dung lượng ~109 MB (không commit vì
+`.gitignore` đã chặn) nhưng API nạp trong ~0,2 giây thay vì 2–3 giây nếu nén. Server còn
+nạp sẵn mô hình ở luồng nền lúc khởi động (`lifespan`) nên request đầu tiên không bị chậm.
+
 ## Cách dùng trong hệ thống
 
 - `EtaModel.predict_native(distance_km, hour, weekday)` — trả lời khách "đơn này bao lâu".
@@ -73,4 +79,5 @@ Random Forest giảm 24% MAE so với hồi quy tuyến tính. Gradient Boosting
    là cận dưới.
 2. Chỉ một tháng dữ liệu, chưa học được mùa mưa hay dịp lễ.
 3. Chưa có đặc trưng thời tiết thật trong dữ liệu; `is_rain` chỉ có ở bản dự phòng.
+
 

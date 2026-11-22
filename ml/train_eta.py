@@ -205,8 +205,10 @@ def main() -> int:
     }
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    dump(fitted["random_forest"], MODEL_DIR / "eta_rf.joblib", compress=3)
-    dump(fitted["linear"], MODEL_DIR / "eta_linear.joblib", compress=3)
+    # compress=0: đổi lấy dung lượng (~110 MB) để API nạp mô hình trong ~0,2 giây.
+    # Nén mất 30-80 MB nhưng giải nén tốn 2-3 giây mỗi lần khởi động, không đáng.
+    dump(fitted["random_forest"], MODEL_DIR / "eta_rf.joblib", compress=0)
+    dump(fitted["linear"], MODEL_DIR / "eta_linear.joblib", compress=0)
     (MODEL_DIR / "eta_metrics.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -222,3 +224,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

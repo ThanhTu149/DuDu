@@ -3,3 +3,5 @@ uvicorn[standard]>=0.30
 scikit-learn>=1.5
 numpy>=1.26
 pandas>=2.2
+pydantic>=2.5
+
