@@ -7,7 +7,7 @@ nhận đơn → dự đoán thời gian giao (ETA) → chia đơn cho tài xế
 ràng buộc vận hành và giải trình lại quyết định.
 
 Ngoài dữ liệu sinh theo seed, hệ thống nhận **đơn hàng thật từ CSV** (tối đa 200 dòng, kiểm
-tra từng dòng), lưu **lịch sử kế hoạch** vào SQLite và có endpoint khôi phục lại kế hoạch cũ.
+tra từng dòng), lưu **lịch sử kế hoạch** vào SQLite kèm nút **Lịch sử** trên giao diện để khôi phục lại bản đồ, KPI và nhật ký.
 Đề tài phát triển từ các gợi ý **31 (tối ưu tuyến đường), 32 (dự đoán ETA), 33 (phân bổ
 đơn hàng)** trong danh sách đề tài của học phần.
 
@@ -126,6 +126,24 @@ python ml/advanced_eval.py --report             # -> docs/ket-qua-eta-nang-cao.m
   ~180 ms, 200 đơn ~5,2 s (2-opt O(n³) trên tuyến dài); 8 luồng × 5 request không lỗi, kết
   quả nhất quán nhờ cache + lock. Chạy lại bằng `python tools/bench_api.py --report`.
 
+## Kiểm thử giao diện (E2E)
+
+Smoke test Playwright đi qua 3 luồng chính: lập kế hoạch 48 đơn → mở **Lịch sử** và khôi phục
+kế hoạch → nhập CSV mẫu 12 đơn. Mọi lỗi JS hoặc response ≥ 400 đều làm test fail; ảnh chụp
+khi lỗi lưu trong `tests/e2e/artifacts/`.
+
+```powershell
+# một lần: cài Playwright + Chromium
+npm install
+npx playwright install chromium
+
+# server phải đang chạy (run.bat), rồi:
+node tests/e2e/smoke.cjs
+```
+
+Máy dev đã có Chromium riêng thì đặt thêm `$env:E2E_CHROMIUM = "đường dẫn chrome.exe"`.
+GitHub Actions chạy tự động qua workflow `.github/workflows/e2e.yml` (server nền + Playwright).
+
 ## Kiểm thử tự động
 
 Repo có bộ kiểm thử cho phần lõi (không cần cài mô hình, không gọi mạng):
@@ -194,6 +212,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

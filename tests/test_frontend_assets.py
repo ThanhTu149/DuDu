@@ -89,6 +89,9 @@ class TestFrontendAssets(unittest.TestCase):
         js = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
         self.assertIn("/api/plan/import", js)
         self.assertIn("importCsvPlan", js)
+        self.assertIn('id="history-btn"', html)
+        self.assertIn("openHistory", js)
+        self.assertIn("/api/history", js)
 
     def test_map_legend_matches_symbols(self) -> None:
         # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
@@ -123,6 +126,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

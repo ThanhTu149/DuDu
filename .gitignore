@@ -30,3 +30,8 @@ data/processed/eta_*.csv
 # Lịch sử kế hoạch (SQLite sinh khi chạy web)
 data/processed/*.sqlite3
 data/processed/*.sqlite3-*
+
+# E2E (Playwright): cài cục bộ, không commit
+node_modules/
+package-lock.json
+tests/e2e/artifacts/

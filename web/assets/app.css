@@ -1856,3 +1856,40 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
 .steps::before { bottom: 20px; }
 .log-panel { --steps-pad: 20px; }
 .panel-head { padding: 4px 16px; }
+
+/* ============ v21: drawer lịch sử kế hoạch ============ */
+
+.history-hint { margin: 0 0 10px; font-size: 12px; color: var(--ink-3); }
+.history-empty { margin: 6px 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "kind main go" "kind meta go";
+  gap: 3px 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.history-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.history-item:disabled { opacity: .55; cursor: progress; }
+.history-kind {
+  grid-area: kind; align-self: center;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em;
+  padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+  background: var(--warm-soft); color: var(--accent);
+}
+.history-kind--incident { background: var(--warn-soft); color: var(--warn-ink); }
+.history-kind--import { background: var(--surface-2); color: var(--ink-2); }
+.history-main {
+  grid-area: main; display: flex; align-items: baseline; gap: 10px;
+  font-size: 12.5px; color: var(--ink);
+}
+.history-main b { margin-left: auto; color: var(--accent); font-weight: 600; }
+.history-meta { grid-area: meta; font-size: 11px; color: var(--ink-3); }
+.history-go { grid-area: go; align-self: center; font-size: 17px; color: var(--ink-3); }

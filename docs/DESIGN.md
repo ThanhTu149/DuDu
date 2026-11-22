@@ -573,3 +573,13 @@ Kỹ thuật:
 
 Kiểm chứng 1366×768 và 1920×1080, light + dark: ảnh load đủ 3, cao đúng 38px, không tràn
 (`scrollWidth` = viewport), 0 request 404, 0 lỗi JS; hover đo được `matrix(1.0993, -0.0384…)`.
+
+## 25. Bản v21 — drawer lịch sử kế hoạch
+
+- Nút **Lịch sử** ở topbar mở modal tái sử dụng `#modal` (focus trap, `Esc` đóng).
+- Mỗi dòng: badge loại (Kịch bản / Nhập CSV / Sự cố), thời gian, km, số đơn, trễ, % đúng giờ;
+  hover nâng nhẹ + viền accent.
+- Bấm dòng → `GET /api/history/{id}` → `paintPlan(payload)`; payload mang thêm `orders` và
+  `vehicles` gốc nên thẻ đơn trên bản đồ, drawer chi tiết và thẻ tài xế hiển thị đúng dữ liệu
+  của kế hoạch được khôi phục (kể cả kế hoạch nhập CSV).
+- Sự cố được khôi phục thì `markIncident(kind)` bật lại trạng thái banner sự cố tương ứng.

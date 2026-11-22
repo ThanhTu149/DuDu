@@ -58,3 +58,10 @@ Mỗi lần lập kế hoạch (theo seed, nhập CSV hoặc xử lý sự cố)
 `data/processed/history.sqlite3` (đã gitignore): metadata truy vấn, metrics tóm tắt và toàn bộ
 payload. Đổi đường dẫn bằng biến môi trường `DUDU_DB` (test dùng file tạm). Lỗi ghi lịch sử
 không làm hỏng lần lập kế hoạch — API vẫn trả kết quả bình thường.
+
+## Duyệt lịch sử trên giao diện
+
+Nút **Lịch sử** cạnh nút **Nhập CSV** mở danh sách 20 kế hoạch gần nhất (kịch bản / nhập CSV /
+sự cố). Bấm một dòng để khôi phục: bản đồ, KPI, tuyến theo tài xế, nhật ký, bảng luật và Gantt
+được vẽ lại đúng như lúc lập; toast xác nhận số đơn, km, số trễ. Đóng bằng `Esc`, nút ×, hoặc
+bấm nền.

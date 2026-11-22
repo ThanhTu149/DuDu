@@ -1473,6 +1473,14 @@ function paintPlan(plan) {
   state.plan = plan;
   state.activeVehicle = null;
   state.geometryDone = false;
+  // Kế hoạch nhập CSV / khôi phục từ lịch sử mang theo đơn & xe gốc: nạp lại để
+  // thẻ đơn trên bản đồ và drawer hiển thị đúng chi tiết thay vì dữ liệu kịch bản cũ.
+  if (Array.isArray(plan.orders) && plan.orders.length) {
+    state.ordersById = Object.fromEntries(plan.orders.map((order) => [order.id, order]));
+  }
+  if (Array.isArray(plan.vehicles) && plan.vehicles.length) {
+    state.vehiclesById = Object.fromEntries(plan.vehicles.map((vehicle) => [vehicle.id, vehicle]));
+  }
   drawBase();
   drawScale();
   drawRoutes();
@@ -1762,6 +1770,70 @@ function setRailActive(view) {
   });
 }
 
+const HISTORY_KIND_LABEL = { plan: "Kịch bản", import: "Nhập CSV", incident: "Sự cố" };
+
+function historyTime(iso) {
+  try {
+    return new Date(iso).toLocaleString("vi-VN", {
+      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+    });
+  } catch {
+    return String(iso);
+  }
+}
+
+async function openHistory() {
+  let data;
+  try {
+    data = await api("/api/history?limit=20");
+  } catch (error) {
+    toast(`Không tải được lịch sử: ${error.message}`, "error");
+    return;
+  }
+  const items = data.items || [];
+  $("#modal-title").textContent = "Lịch sử kế hoạch";
+  if (!items.length) {
+    $("#modal-body").innerHTML =
+      '<p class="history-empty">Chưa có kế hoạch nào. Bấm “Lập kế hoạch” hoặc “Nhập CSV” để bắt đầu.</p>';
+  } else {
+    const rows = items.map((item) => {
+      const summary = item.summary || {};
+      const kind = HISTORY_KIND_LABEL[item.kind] || item.kind;
+      const onTime = Number(summary.on_time_rate ?? 0).toFixed(1);
+      const km = Number(summary.total_km ?? 0);
+      return `<button class="history-item" type="button" data-id="${item.id}">
+        <span class="history-kind history-kind--${esc(item.kind)}">${esc(kind)}</span>
+        <span class="history-main"><span>${esc(historyTime(item.created_at))}</span><b>${fmtKm(km)} km</b></span>
+        <span class="history-meta">${summary.orders ?? "?"} đơn · ${summary.late_count ?? 0} trễ · ${onTime}% đúng giờ</span>
+        <span class="history-go" aria-hidden="true">↺</span>
+      </button>`;
+    });
+    $("#modal-body").innerHTML =
+      '<p class="history-hint">Chọn một kế hoạch để khôi phục lại bản đồ, KPI và nhật ký.</p>'
+      + `<div class="history-list">${rows.join("")}</div>`;
+  }
+  $("#modal").hidden = false;
+  trapFocus($("#modal"));
+}
+
+async function restoreHistory(planId) {
+  const button = document.querySelector(`.history-item[data-id="${planId}"]`);
+  if (button) button.disabled = true;
+  try {
+    const record = await api(`/api/history/${planId}`);
+    const plan = record.payload;
+    closeModal();
+    paintPlan(plan);
+    updateMascotFromPlan();
+    if (plan.incident && plan.incident.kind) markIncident(plan.incident.kind);
+    toast(`Đã khôi phục kế hoạch #${planId}: ${plan.metrics?.orders ?? "?"} đơn · `
+      + `${fmtKm(plan.metrics?.total_km ?? 0)} km · ${plan.metrics?.late_count ?? 0} trễ`);
+  } catch (error) {
+    toast(`Không khôi phục được kế hoạch #${planId}: ${error.message}`, "error");
+    if (button) button.disabled = false;
+  }
+}
+
 function closeModal() {
   const modal = $("#modal");
   releaseFocus(modal);
@@ -1818,6 +1890,11 @@ async function loadEtaInfo() {
   await loadEtaInfo();
 
   $("#plan-btn").addEventListener("click", runPlan);
+  $("#history-btn")?.addEventListener("click", openHistory);
+  $("#modal-body").addEventListener("click", (event) => {
+    const item = event.target.closest?.(".history-item");
+    if (item) restoreHistory(Number(item.dataset.id));
+  });
   $("#import-btn")?.addEventListener("click", () => $("#import-file")?.click());
   $("#import-file")?.addEventListener("change", importCsvPlan);
   $("#compare-btn").addEventListener("click", openCompare);

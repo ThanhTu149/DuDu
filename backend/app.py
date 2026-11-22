@@ -270,6 +270,9 @@ def plan(payload: PlanRequest | None = None) -> dict:
             "Chạy python ml/train_eta.py để bật hiệu chỉnh ùn tắc."
         )
     result["history_id"] = history_save("plan", request.model_dump(), result)
+    # kèm dữ liệu nguồn để UI khôi phục kế hoạch từ lịch sử vẫn có đủ chi tiết đơn/xe
+    result["orders"] = orders
+    result["vehicles"] = vehicles
     return result
 
 
@@ -299,6 +302,8 @@ def plan_import(payload: ImportPlanRequest) -> dict:
             "Chưa có mô hình ETA trên máy này — kế hoạch đang tính theo OSRM free-flow."
         )
     result["import"] = {"count": parsed["count"], "warnings": parsed["warnings"]}
+    result["orders"] = parsed["orders"]
+    result["vehicles"] = [vehicle.as_dict() for vehicle in vehicles]
     result["history_id"] = history_save(
         "import", {"seed": payload.seed, "vehicles": payload.vehicles, "rows": parsed["count"]}, result
     )
@@ -396,6 +401,8 @@ def incident(payload: IncidentRequest) -> dict:
     record = {
         "before": before,
         "incident": {"kind": payload.kind, "vehicle_id": vehicle_id, "hub_id": hub_id},
+        "orders": data["orders"],
+        "vehicles": data["vehicles"],
         **result,
     }
     record["history_id"] = history_save("incident", payload.model_dump(), record)

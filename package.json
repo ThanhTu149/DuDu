@@ -1,0 +1,11 @@
+{
+  "name": "dudu-e2e",
+  "private": true,
+  "description": "Playwright smoke test cho giao diện DuDu",
+  "scripts": {
+    "e2e": "node tests/e2e/smoke.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1"
+  }
+}
