@@ -1816,3 +1816,5 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
   border: 1.5px solid var(--alert); opacity: .55;
 }
 .hub-glyph .hub-label { font-size: 9px; stroke-width: 2.5px; }
+.lg-badge--depot svg { transform: translateY(-0.4px); }
+.hub-glyph { shape-rendering: geometricPrecision; }

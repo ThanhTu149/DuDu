@@ -90,6 +90,8 @@ class TestFrontendAssets(unittest.TestCase):
         js = (WEB / "assets" / "app.js").read_text(encoding="utf-8")
         self.assertIn("updateHubGlyphs", js)
         self.assertIn("HUB_GLYPHS", js)
+        self.assertIn("mapPixelScale", js)
+        self.assertIn("placeHubLabels", js)
 
     def test_mobile_nav_present(self) -> None:
         html = (WEB / "index.html").read_text(encoding="utf-8")
@@ -99,5 +101,6 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

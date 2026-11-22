@@ -443,35 +443,108 @@ function drawHubs() {
       glyph.appendChild(el("circle", { cx: 0, cy: 0, r: size / 2, class: "hub-badge" }));
     }
     const iconSize = isDepot ? 11 : 10;
+    // path warehouse có bbox lệch 0.5 đơn vị so với tâm viewBox 24 → bù quang học cho icon nằm giữa
+    const opticalY = isDepot ? -0.5 * (iconSize / 24) : 0;
     const icon = el("g", {
       class: "hub-ico",
-      transform: `translate(${-iconSize / 2} ${-iconSize / 2}) scale(${(iconSize / 24).toFixed(4)})`,
+      transform: `translate(${-iconSize / 2} ${(-iconSize / 2 + opticalY).toFixed(3)}) scale(${(iconSize / 24).toFixed(4)})`,
     });
     for (const d of HUB_GLYPHS[isDepot ? "depot" : "hub"]) {
       icon.appendChild(el("path", { d, class: "hub-ico-path" }));
     }
     glyph.appendChild(icon);
 
-    const label = el("text", { x: size / 2 + 5, y: 3.5, class: "hub-label" });
+    const label = el("text", { class: "hub-label" });
     label.textContent = hub.name;
     glyph.appendChild(label);
 
     layer.appendChild(glyph);
-    state.hubGlyphs.push({ group: glyph, x, y });
+    state.hubGlyphs.push({ group: glyph, label, name: hub.name, size, x, y });
   }
   svg.appendChild(layer);
   updateHubGlyphs();
 }
 
+/* Tỉ lệ thật của SVG (user unit → pixel). Không dùng rect.width/view.w vì khi zoom sâu
+   viewBox bị clamp, preserveAspectRatio=meet làm tỉ lệ thật nhỏ hơn → marker và nhãn co nhỏ
+   dần. getScreenCTM() trả đúng ma trận đang render. */
+function mapPixelScale() {
+  const svg = $("#map");
+  const ctm = svg.getScreenCTM?.();
+  if (ctm) {
+    const mag = Math.hypot(ctm.a, ctm.b);
+    if (mag > 1e-6) return mag;
+  }
+  const rect = svg.getBoundingClientRect();
+  const viewW = state.view ? state.view.w : W;
+  return Math.max(rect.width / Math.max(viewW, 1), 0.0001);
+}
+
+let labelMeasureCtx = null;
+function measureLabelWidth(text) {
+  if (!labelMeasureCtx) labelMeasureCtx = document.createElement("canvas").getContext("2d");
+  const family = getComputedStyle(document.documentElement).getPropertyValue("--sans").trim() || "sans-serif";
+  labelMeasureCtx.font = `500 9px ${family}`;
+  return labelMeasureCtx.measureText(text).width;
+}
+
+/* Đặt nhãn quanh huy hiệu, ưu tiên bên phải; nếu chạm huy hiệu/nhãn khác thì đổi vị trí,
+   nhờ vậy nhãn luôn thẳng hàng với tâm huy hiệu ở mức zoom mặc định. */
+function placeHubLabels(items) {
+  const occupied = [];
+  const badgeBoxes = items.map((it) => ({
+    x0: it.sx - it.size / 2 - 2, x1: it.sx + it.size / 2 + 2,
+    y0: it.sy - it.size / 2 - 2, y1: it.sy + it.size / 2 + 2,
+  }));
+  const collides = (box) =>
+    occupied.some((o) => !(box.x1 <= o.x0 - 2 || box.x0 >= o.x1 + 2 || box.y1 <= o.y0 - 2 || box.y0 >= o.y1 + 2)) ||
+    badgeBoxes.some((o) => !(box.x1 <= o.x0 - 1 || box.x0 >= o.x1 + 1 || box.y1 <= o.y0 - 1 || box.y0 >= o.y1 + 1));
+
+  for (const it of items) {
+    const width = measureLabelWidth(it.name);
+    const height = 9;
+    const right = it.size / 2 + 4;
+    const left = -(it.size / 2 + 4);
+    const candidates = [
+      { x: right, y: 3.5, anchor: "start" },
+      { x: right, y: -3.5, anchor: "start" },
+      { x: right, y: 10.2, anchor: "start" },
+      { x: left, y: 3.5, anchor: "end" },
+      { x: left, y: -3.5, anchor: "end" },
+      { x: left, y: 10.2, anchor: "end" },
+    ];
+    let chosen = candidates[0];
+    for (const candidate of candidates) {
+      const x0 = candidate.anchor === "end" ? it.sx + candidate.x - width : it.sx + candidate.x;
+      const box = { x0, x1: x0 + width, y0: it.sy + candidate.y - height, y1: it.sy + candidate.y + 2 };
+      if (!collides(box)) { chosen = candidate; break; }
+    }
+    const x0 = chosen.anchor === "end" ? it.sx + chosen.x - width : it.sx + chosen.x;
+    occupied.push({ x0, x1: x0 + width, y0: it.sy + chosen.y - height, y1: it.sy + chosen.y + 2 });
+    it.label.setAttribute("x", chosen.x.toFixed(2));
+    it.label.setAttribute("y", chosen.y.toFixed(2));
+    it.label.setAttribute("text-anchor", chosen.anchor);
+  }
+}
+
 function updateHubGlyphs() {
   if (!state.hubGlyphs?.length) return;
-  const rect = $("#map").getBoundingClientRect();
-  const viewW = state.view ? state.view.w : W;
-  const pxPerWorld = Math.max(rect.width / Math.max(viewW, 1), 0.0001);
+  const svg = $("#map");
+  const ctm = svg.getScreenCTM?.();
+  const pxPerWorld = mapPixelScale();
   const scale = 1 / pxPerWorld;
-  for (const { group, x, y } of state.hubGlyphs) {
-    group.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(3)})`);
+  const items = [];
+  for (const item of state.hubGlyphs) {
+    item.group.setAttribute(
+      "transform",
+      `translate(${item.x.toFixed(2)} ${item.y.toFixed(2)}) scale(${scale.toFixed(4)})`
+    );
+    const sx = ctm ? item.x * ctm.a + item.y * ctm.c + ctm.e : 0;
+    const sy = ctm ? item.y * ctm.d + item.x * ctm.b + ctm.f : 0;
+    items.push({ ...item, sx, sy });
   }
+  items.sort((a, b) => a.sx - b.sx);
+  placeHubLabels(items);
 }
 
 function drawScale() {
@@ -1857,6 +1930,8 @@ async function loadEtaInfo() {
     </div>`;
   }
 })();
+
+
 
 
 

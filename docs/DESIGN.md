@@ -518,3 +518,31 @@ Kiểm chứng tự động (Playwright, cả 3 kích thước × 2 theme):
 
 Không tràn ngang (1366/1920/390), 0 request 404, 0 lỗi JS. Ảnh: `giao-dien-dieu-phoi.png`,
 `giao-dien-toi.png`, `giao-dien-zoom.png` (chụp ở zoom 6×).
+
+## 23. Bản v18 — sửa lỗi icon lệch và chữ co nhỏ khi zoom
+
+**Triệu chứng:** phóng to bản đồ (≥ ~4×) thì huy hiệu và tên nút co nhỏ dần, icon trong huy hiệu
+trông lệch tâm.
+
+**Nguyên nhân gốc:** kích thước screen-space được quy đổi bằng `rect.width / view.w`. Khi zoom
+sâu, `zoomAt` chặn `viewBox` ở ngưỡng nhỏ (min 120×80) và `preserveAspectRatio="xMidYMid meet"`
+khiến tỉ lệ render thật nhỏ hơn tỉ lệ tính theo chiều ngang → hệ số bù sai, huy hiệu/nhãn bị thu
+nhỏ dần. Icon kho còn lệch 0,23px vì bbox path `warehouse` lệch 0,5 đơn vị so với tâm viewBox 24.
+
+**Cách sửa:**
+1. Dùng `svg.getScreenCTM()` lấy đúng ma trận user-unit → pixel đang render (`mapPixelScale()`),
+   áp cho cả huy hiệu nút và marker sự cố.
+2. Bù quang học icon kho `-0.5 × iconSize/24`, căn nhãn đúng tâm dọc (`labelMid = 0`).
+3. Nhãn được đặt động bằng thuật toán chống chồng: ưu tiên bên phải, nếu chạm huy hiệu/nhãn khác
+   thì thử trên/dưới/trái — nhờ vậy nhãn luôn thẳng hàng, không còn so le tuỳ tiện.
+
+**Đo sau khi sửa (Playwright, 1366/1920/390 × light/dark):**
+
+| Chỉ số | Fit | Zoom 6× | Zoom 12,5× |
+|---|---|---|---|
+| Huy hiệu kho | 18px | 18px | 18px |
+| Lệch tâm icon | `[0, 0]` | `[0, 0]` | `[0, 0]` |
+| Chiều cao nhãn | 11px | 11px | 11px |
+| Nhãn lệch tâm dọc | 0px | 0px | 0px |
+
+Không tràn ngang, 0 request 404, 0 lỗi JS. Ảnh `giao-dien-zoom.png` chụp ở zoom 6×.
