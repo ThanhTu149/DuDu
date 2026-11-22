@@ -99,6 +99,8 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn("info.interval", js)
         self.assertIn(".history-del", js)
         self.assertIn("history?limit=20&offset=", js)
+        self.assertIn("/api/eta/interval", js)
+        self.assertIn("drawer-eta-interval", js)
         self.assertIn("history-clear", js)
         self.assertIn("fmtPercent", js)
         self.assertIn("Xuất CSV", html)
@@ -136,6 +138,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

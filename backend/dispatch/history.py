@@ -125,7 +125,22 @@ def save(kind: str, request: dict, result: dict) -> int | None:
         return None
 
 
+def dedupe() -> int:
+    """Gộp các bản ghi trùng (cùng kind + request + summary), giữ bản mới nhất."""
+    try:
+        init()
+        with closing(_connect()) as connection, connection:
+            cursor = connection.execute(
+                "DELETE FROM plans WHERE id NOT IN "
+                "(SELECT MAX(id) FROM plans GROUP BY kind, summary_json, request_json)"
+            )
+        return int(cursor.rowcount)
+    except Exception:
+        return 0
+
 def recent(limit: int = 20, offset: int = 0) -> list[dict]:
+    # Danh sách luôn sạch bản ghi trùng, kể cả DB cũ chưa được dọn lúc khởi động.
+    dedupe()
     try:
         init()
         with closing(_connect()) as connection, connection:
@@ -210,6 +225,5 @@ def get(plan_id: int) -> dict | None:
         "request": json.loads(row["request_json"]),
         "payload": json.loads(row["payload_json"]),
     }
-
 
 

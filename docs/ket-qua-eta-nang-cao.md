@@ -61,3 +61,10 @@ python ml/calibrate_eta.py      # sinh ml/models/eta_quantiles.json
 
 File JSON nhỏ (~1 KB) được commit để API trả khoảng tin cậy ngay cả khi mô hình nặng không
 nằm trong git; nếu thiếu file, `/api/eta/interval` trả 503 kèm hướng dẫn.
+
+## Hiển thị trên giao diện
+
+- “Cấu hình giả lập” hiện dòng tóm tắt khoảng 80% (độ rộng trung bình + độ phủ).
+- Bấm vào một điểm giao khi đang bật **ETA mô hình**: drawer chi tiết có thêm dòng
+  **“Khoảng tin cậy”** gọi `/api/eta/interval` theo quãng đường và giờ của chặng, ví dụ
+  `17,6–44,8 phút (80%, dự đoán 27,5)`.

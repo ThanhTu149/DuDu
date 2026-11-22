@@ -1150,6 +1150,13 @@ function openOrder(orderId, route, options = {}) {
   if (vehicle) kv.push(["Tài xế", `${esc(vehicle.driver)} · ${esc(route.plate)} (${esc(vehicle.label)})`]);
   if (stop && route) kv.push(["Thứ tự", `điểm ${route.stops.indexOf(stop) + 1} / ${route.stops.length}`]);
 
+  // Khoảng tin cậy 80% của chặng tới điểm này (chỉ khi đang bật ETA mô hình)
+  const leg = route?.legs?.find((item) => item.order_id === orderId);
+  const showInterval = Boolean(leg && stop && $("#use-ml")?.checked);
+  if (showInterval) {
+    kv.push(["Khoảng tin cậy", '<span id="drawer-eta-interval" class="eta-pending">đang tính…</span>']);
+  }
+
   const rulesHtml = rules.length
     ? rules.map((violation) => `<div class="drawer-rule">
          <b>${esc(violation.rule_id)} — ${esc(violation.title)}</b>
@@ -1176,6 +1183,25 @@ function openOrder(orderId, route, options = {}) {
   $("#drawer-back")?.addEventListener("click", openOrders);
   const button = $("#drawer-open-route");
   if (button) button.addEventListener("click", () => openVehicle(route.vehicle_id));
+
+  if (showInterval) {
+    const hour = Math.floor((stop.arrive_min % 1440) / 60);
+    api(`/api/eta/interval?distance_km=${encodeURIComponent(leg.km)}&hour=${hour}&weekday=2`)
+      .then((data) => {
+        const target = document.getElementById("drawer-eta-interval");
+        if (target) {
+          target.classList.remove("eta-pending");
+          target.textContent = `${fmt1(data.low_min)}–${fmt1(data.high_min)} phút (80%, dự đoán ${fmt1(data.predicted_min)})`;
+        }
+      })
+      .catch(() => {
+        const target = document.getElementById("drawer-eta-interval");
+        if (target) {
+          target.classList.remove("eta-pending");
+          target.textContent = "— (chưa hiệu chuẩn)";
+        }
+      });
+  }
 }
 
 function openVehicle(vehicleId) {
@@ -1972,8 +1998,8 @@ async function loadEtaInfo() {
     const ciNote = $("#eta-ci-note");
     if (ciNote && info.interval) {
       ciNote.hidden = false;
-      ciNote.textContent = `Khoảng 80%: ±${info.interval.mean_width_min.toFixed(1)}′`
-        + ` · phủ ${(info.interval.coverage_actual * 100).toFixed(1)}%`;
+      ciNote.textContent = `Khoảng 80%: ±${fmt1(info.interval.mean_width_min)}′`
+        + ` · phủ ${fmtPercent(info.interval.coverage_actual * 100)}%`;
       ciNote.title = "Học từ phân vị phần dư trên dữ liệu hiệu chuẩn (ngày 25–27)";
     }
   } catch {

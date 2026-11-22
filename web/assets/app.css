@@ -1921,3 +1921,31 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
 .history-clear { color: var(--alert); border-color: var(--line-soft); }
 .history-clear:hover { border-color: var(--alert); }
 #modal-body { padding-bottom: 28px; }
+
+/* v25: sửa chồng chữ dòng phụ trong lịch sử */
+.history-item {
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  row-gap: 2px;
+}
+.history-sub { grid-area: sub; font-size: 11px; color: var(--ink-3); }
+.history-meta { grid-area: meta; }
+
+/* v26: đặt vị trí tường minh cho các dòng lịch sử (tránh chồng chữ) */
+.history-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 10px 12px;
+}
+.history-kind { grid-column: 1; grid-row: 1 / span 3; align-self: center; }
+.history-main { grid-column: 2; grid-row: 1; }
+.history-meta { grid-column: 2; grid-row: 2; }
+.history-sub { grid-column: 2; grid-row: 3; }
+.history-go { grid-column: 3; grid-row: 1 / span 3; align-self: center; }
+
+/* v27: khoảng tin cậy ETA trong drawer đơn */
+.eta-pending { color: var(--ink-3); font-size: 11.5px; font-style: italic; }
