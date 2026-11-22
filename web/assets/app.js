@@ -1188,11 +1188,11 @@ function renderGantt() {
     const color = ROUTE_COLORS[state.plan.routes.indexOf(route) % ROUTE_COLORS.length];
     parts.push(`<rect class="g-row${route.vehicle_id === state.activeVehicle ? " is-active" : ""}" data-vehicle="${route.vehicle_id}" x="0" y="${y}" width="${width}" height="${rowHeight}" fill="transparent"/>`);
     parts.push(`<text class="g-label" x="0" y="${y + 13}">${esc(route.plate)}</text>`);
-    parts.push(`<rect x="${left}" y="${y + 3}" width="${(width - left - 12).toFixed(1)}" height="16" fill="#f1ece1" rx="3" opacity="0.55"/>`);
+    parts.push(`<rect class="g-track" x="${left}" y="${y + 3}" width="${(width - left - 12).toFixed(1)}" height="16" rx="6"/>`);
     for (const stop of route.stops) {
       const from = x(stop.arrive_min);
       const to = Math.max(from + 2, x(stop.arrive_min + stop.service_min));
-      parts.push(`<rect class="g-block" x="${from.toFixed(1)}" y="${y + 3}" width="${(to - from).toFixed(1)}" height="16" fill="${stop.late ? "#b3261e" : color}" opacity="${stop.late ? 0.9 : 0.78}"><title>${stop.code} · ${clockLabel(stop.arrive_min)}${stop.late ? " · trễ" : ""}</title></rect>`);
+      parts.push(`<rect class="g-block${stop.late ? " is-late" : ""}" x="${from.toFixed(1)}" y="${y + 3}" width="${(to - from).toFixed(1)}" height="16" fill="${stop.late ? "#b3261e" : color}"><title>${esc(stop.code)} · ${clockLabel(stop.arrive_min)}${stop.late ? " · trễ" : ""}</title></rect>`);
     }
   });
 
@@ -1732,6 +1732,7 @@ async function loadEtaInfo() {
     </div>`;
   }
 })();
+
 
 
 

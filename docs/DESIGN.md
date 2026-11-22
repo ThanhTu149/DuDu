@@ -477,3 +477,17 @@ Chuyển theme chuyển cảnh `0.2s`; trạng thái lưu `localStorage["dudu:th
 
 Thêm 11 token màu cho dark/map vào `docs/design-system/tokens.json` để Figma cũng có.
 Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-toi.png`, `giao-dien-di-dong.png`.
+
+## 21. Bản v16 — logo ảnh ở header và tương phản Gantt
+
+| Hạng mục | Thay đổi |
+|---|---|
+| Logo header | Chữ "DuDu" thay bằng `web/assets/DuDu_Name.png` (cao 28px, `width:auto`, `object-fit:contain`), căn giữa trục dọc với dòng "Điều phối giao hàng nội thành" (đo ở 1920: logo cy 29 = chữ cy 29), hover `scale(1.05)`, click vẫn mở modal giới thiệu |
+| Ảnh gốc | Tệp gốc 2895×1053 (1,9 MB) được cắt viền trong suốt + thu về 308×112 (45 KB, 4× chiều cao hiển thị) để không làm nặng trang |
+| Gantt — rãnh nền | `<rect class="g-track">` thay màu hard-code; light `#EFEAE0`, dark `#24211E`, `rx: 6` |
+| Gantt — khối đơn | Viền 1,2–1,3px trùng màu rãnh để tách từng điểm giao; dark tăng độ sáng (dùng bảng màu tuyến dark); đơn trễ `#EF4444` + `drop-shadow` đỏ nhẹ (light giữ `#B3261E`) |
+| Gantt — chữ & lưới | Dark: nhãn biển số và mốc giờ `#D6D3D1`; đường kẻ dọc nét đứt `rgba(255,255,255,.08)` (`dasharray 4 6`); light giữ lưới liền như cũ |
+
+Kiểm chứng bằng computed style ở 1366×768: light `track rgb(239,234,224) / stroke rgb(250,248,244) / late rgb(179,38,30)`;
+dark `track rgb(36,33,30) / stroke rgb(36,33,30) / late rgb(239,68,68) + drop-shadow / label rgb(214,211,209) / grid rgba(255,255,255,0.08) dash 4px,6px`.
+Logo: `complete=true`, cao 28px, hover `matrix(1.05…)`, click mở modal OK; 0 request 404, 0 lỗi JS.

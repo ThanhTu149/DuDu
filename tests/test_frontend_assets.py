@@ -27,6 +27,7 @@ REQUIRED_FILES = [
     "assets/app.js",
     "assets/banner.jpg",
     "assets/avatar.jpg",
+    "assets/DuDu_Name.png",
     "assets/favicon.png",
     "assets/favicon-180.png",
     "assets/stickers/dudu.png",
@@ -86,3 +87,4 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
