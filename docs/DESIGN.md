@@ -546,3 +546,30 @@ nhỏ dần. Icon kho còn lệch 0,23px vì bbox path `warehouse` lệch 0,5 đ
 | Nhãn lệch tâm dọc | 0px | 0px | 0px |
 
 Không tràn ngang, 0 request 404, 0 lỗi JS. Ảnh `giao-dien-zoom.png` chụp ở zoom 6×.
+
+## 24. Bản v19 — gấu mascot ở header 3 panel
+
+| Panel | Ảnh | Tooltip |
+|---|---|---|
+| Tuyến theo tài xế | `gau-nau-header.png` | "Gấu Nâu — Phụ trách phân bổ đơn & đội tài xế" |
+| Quyết định của tác tử | `gau-trang-header.png` (thay cả avatar mini + icon chip) | "Gấu Trắng — Tác tử tối ưu tuyến đường & suy luận" |
+| Đối chiếu cơ sở luật | `gau-truc-header.png` (thay icon tam giác) | "Gấu Trúc — Thanh tra ETA & đối chiếu 12 cơ sở luật" |
+
+Kỹ thuật:
+
+- `height: 38px; width: auto; max-width: 58px; object-fit: contain; flex-shrink: 0`
+  + `margin-block: -6px` để ảnh "nổi" mà **không phình header**.
+- Header cao sau khi đổi: **36 / 40 / 35px** (trước là ~39–40px) → danh sách tài xế và nhật ký
+  không bị lấn chỗ.
+- Tiêu đề `TUYẾN THEO TÀI XẾ` chuyển sang **căn trái**, sát bên phải Gấu Nâu (khoảng cách 8px),
+  pill `7 tuyến` neo phải (cách mép 17px).
+- Hover: `scale(1.1) rotate(-2deg)` trong 200ms; light dùng shadow nhẹ, dark thêm viền sáng
+  `drop-shadow(0 0 1.5px rgba(250,245,232,.55))` + bóng đổ để nét viền tối không chìm vào nền
+  `#1A1715`.
+- Ảnh gốc 0,8–1 MB được cắt viền trong suốt + thu về **cao 114px (3×)**: 23/31/21 KB, vẫn nét
+  trên màn retina.
+- Dòng cuối `Chốt kế hoạch` không còn bị cắt: `li` padding 4px, `.steps` padding-bottom 20px —
+  đo được dòng cuối cách đáy khung 7px, `clipped = false`.
+
+Kiểm chứng 1366×768 và 1920×1080, light + dark: ảnh load đủ 3, cao đúng 38px, không tràn
+(`scrollWidth` = viewport), 0 request 404, 0 lỗi JS; hover đo được `matrix(1.0993, -0.0384…)`.

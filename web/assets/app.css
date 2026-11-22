@@ -1818,3 +1818,41 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
 .hub-glyph .hub-label { font-size: 9px; stroke-width: 2.5px; }
 .lg-badge--depot svg { transform: translateY(-0.4px); }
 .hub-glyph { shape-rendering: geometricPrecision; }
+
+/* ============ v19: gấu mascot ở header 3 panel ============ */
+
+.panel-head, .side-head { overflow: visible; }
+
+.side-head {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 16px 4px;
+}
+.side-head h2 { margin-right: auto; }
+.side-head .pill { margin-left: auto; }
+
+.panel-head { padding: 6px 16px; gap: 10px; }
+
+.panel-mascot {
+  height: 38px;
+  width: auto;
+  max-width: 58px;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-top: -6px;
+  margin-bottom: -6px;
+  cursor: pointer;
+  transition: transform .2s ease;
+  filter: drop-shadow(0 1px 2px rgba(28, 25, 23, .12));
+}
+.panel-mascot:hover { transform: scale(1.1) rotate(-2deg); }
+[data-theme="dark"] .panel-mascot {
+  filter: drop-shadow(0 0 1.5px rgba(250, 245, 232, .55)) drop-shadow(0 2px 4px rgba(0, 0, 0, .45));
+}
+
+/* dòng cuối panel Quyết định không bị cắt lẹm */
+.steps li { padding: 4px 0; }
+.steps { padding-bottom: 20px; }
+.steps::before { bottom: 20px; }
+.log-panel { --steps-pad: 20px; }
+.panel-head { padding: 4px 16px; }

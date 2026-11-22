@@ -34,6 +34,9 @@ REQUIRED_FILES = [
     "assets/stickers/gau-nau.png",
     "assets/stickers/gau-truc.png",
     "assets/stickers/gau-trang.png",
+    "assets/stickers/gau-nau-header.png",
+    "assets/stickers/gau-trang-header.png",
+    "assets/stickers/gau-truc-header.png",
     "assets/markers/xe-hong.svg",
     "assets/markers/ket-xe.svg",
     "assets/markers/kho-dong.svg",
@@ -93,6 +96,17 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn("mapPixelScale", js)
         self.assertIn("placeHubLabels", js)
 
+    def test_panel_mascots_wired(self) -> None:
+        # 3 panel chính phải dùng ảnh gấu ở header, kèm tooltip đúng nội dung
+        html = (WEB / "index.html").read_text(encoding="utf-8")
+        self.assertEqual(html.count('class="panel-mascot"'), 3)
+        self.assertIn("Gấu Nâu — Phụ trách phân bổ đơn", html)
+        self.assertIn("Gấu Trắng — Tác tử tối ưu tuyến đường", html)
+        self.assertIn("Gấu Trúc — Thanh tra ETA", html)
+        css = (WEB / "assets" / "app.css").read_text(encoding="utf-8")
+        self.assertIn(".panel-mascot", css)
+        self.assertIn("max-width: 58px", css)
+
     def test_mobile_nav_present(self) -> None:
         html = (WEB / "index.html").read_text(encoding="utf-8")
         self.assertIn('class="mobile-nav"', html)
@@ -101,6 +115,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
