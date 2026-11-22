@@ -1,6 +1,15 @@
 # DuDu — Trung tâm điều phối giao hàng nội thành
 
-Bài tập lớn học phần **Trí tuệ nhân tạo (121033)** — Trường Đại học Giao thông Vận tải TP.HCM.
+[![CI](https://github.com/ThanhTu149/DuDu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ThanhTu149/DuDu/actions/workflows/ci.yml)
+[![E2E](https://github.com/ThanhTu149/DuDu/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/ThanhTu149/DuDu/actions/workflows/e2e.yml)
+
+**Sinh viên thực hiện:** Lê Thanh Tú — MSSV 049206004778 — Nhóm 14
+
+**Giảng viên hướng dẫn:** Bùi Trọng Hiếu
+
+**Học phần:** Trí tuệ nhân tạo (121033) — Trường Đại học Giao thông Vận tải TP.HCM
+
+<img src="web/assets/banner.jpg" alt="DuDu — Hệ thống điều phối và tối ưu giao hàng nội thành" width="880" />
 
 DuDu là một bảng điều phối (dispatch console) cho bài toán giao hàng chặng cuối ở TP.HCM:
 nhận đơn → dự đoán thời gian giao (ETA) → chia đơn cho tài xế → xếp tuyến → kiểm tra
@@ -14,6 +23,10 @@ có nút xoá từng bản ghi + **Xoá tất cả**.
 Đề tài phát triển từ các gợi ý **31 (tối ưu tuyến đường), 32 (dự đoán ETA), 33 (phân bổ
 đơn hàng)** trong danh sách đề tài của học phần.
 
+![Giao diện Light Mode — bản đồ điều phối, KPI, tuyến theo tài xế](docs/hinh/giao-dien-dieu-phoi.png)
+
+![Giao diện Dark Mode — Obsidian + Copper](docs/hinh/giao-dien-toi.png)
+
 ## Bốn học phần kiến thức được dùng
 
 | Chương | Nội dung | Nằm ở đâu trong dự án |
@@ -21,7 +34,7 @@ có nút xoá từng bản ghi + **Xoá tất cả**.
 | 1. Tác tử | Tác tử dựa trên mục tiêu/tiện ích, tác tử phản ứng | `backend/dispatch/agent.py` |
 | 2. Tìm kiếm | A\* tìm đường vòng khi kẹt xe, VRP, heuristic Nearest Neighbor / 2-opt / Clarke–Wright | `backend/dispatch/network.py`, `routing.py` |
 | 3. Logic – suy diễn | Cơ sở luật IF–THEN, giải trình chuỗi suy diễn | `backend/dispatch/rules.py` |
-| 4. Máy học | Hồi quy tuyến tính, Random Forest dự đoán ETA | `ml/` |
+| 4. Máy học | Hồi quy tuyến tính, Random Forest, HistGradientBoosting (HGB) — so sánh thêm trong phần đánh giá nâng cao | `ml/` |
 
 ## Cấu trúc thư mục
 
@@ -39,8 +52,8 @@ DuDu/
 ### Cách 1 — bấm đúp `run.bat` (nhanh nhất)
 
 Mở thư mục repo bằng File Explorer → bấm đúp **`run.bat`**. Script tự tìm Python có đủ
-`fastapi`/`uvicorn` (theo thứ tự: biến `DUDU_PYTHON` → `.venv` → `python` trên PATH → bản
-Python của DeepSeek Harness nếu có), khởi động server và tự mở trình duyệt ở
+`fastapi`/`uvicorn` (theo thứ tự: biến `DUDU_PYTHON` → `.venv` → `python` trên PATH → các bản
+Python cài sẵn trên máy), khởi động server và tự mở trình duyệt ở
 `http://127.0.0.1:8000`. Nếu cổng 8000 bận vì DuDu đang chạy sẵn, nó chỉ mở trình duyệt;
 nếu bận vì app khác, nó tự nhảy sang 8010/8020… Đóng cửa sổ đen là tắt server.
 
@@ -105,8 +118,6 @@ sang máy khác / chấm bài không muốn cài Python.
 
 ### Mô hình ETA (tuỳ chọn)
 
-### Mô hình ETA (tuỳ chọn)
-
 Tệp `ml/models/eta_rf.joblib` (~105 MB) **không commit** vì nặng. Nếu thiếu, web vẫn chạy
 bình thường: nút "ETA mô hình" dùng OSRM free-flow và API trả `warnings`. Muốn bật mô hình
 thật:
@@ -122,7 +133,7 @@ python ml/train_eta.py
 ```powershell
 python data/build_matrix.py            # gọi OSRM sinh lại ma trận (cần mạng)
 python -m backend.dispatch.evaluate --report   # sinh bảng kết quả VRP
-python -m unittest discover -s tests -v        # 74 ca kiểm thử
+python -m unittest discover -s tests -v        # 142 ca kiểm thử
 ```
 
 ## Dữ liệu
@@ -135,7 +146,7 @@ python -m unittest discover -s tests -v        # 74 ca kiểm thử
 
 ## Kết quả thực nghiệm (sinh tự động, tái lập được)
 
-Hai script dưới đây sinh báo cáo trong `docs/`, seed cố định nên chạy lại ra đúng từng con số:
+Ba script dưới đây sinh báo cáo trong `docs/`, seed cố định nên chạy lại ra đúng từng con số:
 
 ```powershell
 python -m backend.dispatch.optimal --report     # -> docs/ket-qua-toi-uu.md
@@ -152,20 +163,23 @@ python ml/advanced_eval.py --report             # -> docs/ket-qua-eta-nang-cao.m
 - **Độ nhạy tham số**: `max_rounds` hội tụ sau 4 vòng; bán kính vùng ùn tắc 2→8 km làm A*
   phải đi vòng 3,5→227,4 km, là căn cứ chọn mặc định 4,5 km.
 - **ETA nâng cao** (`docs/ket-qua-eta-nang-cao.md`): tuning 7 cấu hình HGB bằng rolling-origin
-  CV (3 fold); khoảng tin cậy 80% học từ phân vị phần dư đạt độ phủ **82,0%** so với 40,0% của
-  baseline ±15%; bỏ nhóm đặc trưng giờ làm MAE tăng 3,489 → 3,806 phút.
+  CV (3 fold); khoảng tin cậy 80% học từ phân vị phần dư đạt độ phủ **81,3%**, rộng trung bình
+  11,3 phút so với baseline ±15% chỉ phủ 40,0%; bỏ nhóm đặc trưng giờ làm MAE tăng
+  3,489 → 3,806 phút.
 - **Cơ sở luật** (`docs/co-luat.md`): nguồn nghiệp vụ, ma trận xung đột ưu tiên và bảng đối
   chiếu 21 ca kiểm thử cho R01–R12; `docs/ARCHITECTURE.md` có 4 sơ đồ Mermaid (kiến trúc, vòng
   đời tác tử, luồng dữ liệu, xử lý sự cố bằng A*).
-- **Hiệu năng API** (`docs/ket-qua-hieu-nang.md`): 48 đơn ~16 ms, 96 đơn ~91 ms, 144 đơn
-  ~180 ms, 200 đơn ~5,2 s (2-opt O(n³) trên tuyến dài); 8 luồng × 5 request không lỗi, kết
-  quả nhất quán nhờ cache + lock. Chạy lại bằng `python tools/bench_api.py --report`.
+- **Hiệu năng API** (`docs/ket-qua-hieu-nang.md`): 48 đơn ~22 ms, 96 đơn ~55 ms, 144 đơn
+  ~95 ms, 200 đơn ~1,2 s (2-opt tính chi phí bằng mảng cục bộ, nhanh hơn ~4× so với trước);
+  8 luồng × 5 request không lỗi, kết quả nhất quán nhờ cache + lock. Chạy lại bằng
+  `python tools/bench_api.py --report`.
 
 ## Kiểm thử giao diện (E2E)
 
-Smoke test Playwright đi qua 3 luồng chính: lập kế hoạch 48 đơn → mở **Lịch sử** và khôi phục
-kế hoạch → nhập CSV mẫu 12 đơn. Mọi lỗi JS hoặc response ≥ 400 đều làm test fail; ảnh chụp
-khi lỗi lưu trong `tests/e2e/artifacts/`.
+Smoke test Playwright đi qua 3 luồng chính (lập kế hoạch 48 đơn → mở **Lịch sử** và khôi phục
+kế hoạch → nhập CSV mẫu 12 đơn) và kiểm tra thêm **Content-Security-Policy** + a11y cơ bản
+(ảnh có alt, nút có tên, id không trùng, html lang=vi). Mọi lỗi JS hoặc response ≥ 400 đều làm
+test fail; ảnh chụp khi lỗi lưu trong `tests/e2e/artifacts/`.
 
 ```powershell
 # một lần: cài Playwright + Chromium
@@ -184,13 +198,14 @@ GitHub Actions chạy tự động qua workflow `.github/workflows/e2e.yml` (ser
 Repo có bộ kiểm thử cho phần lõi (không cần cài mô hình, không gọi mạng):
 
 ```powershell
-pip install -r requirements.txt -r requirements-dev.txt   # dev cần httpx cho test HTTP
+pip install -r requirements-lock.txt -r requirements-dev-lock.txt   # bản khoá đã kiểm thử
 python -m unittest discover -s tests -v
 ```
 
-69 ca kiểm thử trong `tests/` phủ năm nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
-đi vòng khi chặng bị chặn), bài toán gán Hungarian (đối chiếu với vét cạn), xếp tuyến
-(2-opt không bao giờ làm xấu kết quả, tổng km khớp), và tác tử + API + toàn vẹn dữ liệu.
+**142 ca kiểm thử** trong `tests/` phủ các nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
+đi vòng khi chặng bị chặn), bài toán gán Hungarian (đối chiếu với vét cạn), xếp tuyến (2-opt
+không bao giờ làm xấu kết quả, tổng km khớp), 12 luật vận hành, tác tử + API + toàn vẹn dữ
+liệu, nhập CSV + lịch sử kế hoạch, frontend/launcher và khoảng tin cậy ETA.
 GitHub Actions chạy lại toàn bộ ở mỗi lần push: `.github/workflows/ci.yml`.
 
 ## Hạn chế đã biết
@@ -203,7 +218,8 @@ Nói rõ để người đọc không hiểu nhầm số liệu là thực tế 
 2. **Đồ thị chỉ có 16 nút** (bưu cục, cảng, chợ đầu mối). Khoảng cách giữa các nút là số thật
    từ OSRM, nhưng tuyến trong phố nhỏ không được mô hình hoá; đây là mức trừu tượng phù hợp
    cho bài toán chia đơn, không phải chỉ đường từng ngõ.
-3. **Đơn hàng mô phỏng theo seed**, không phải lô đơn thật. Ưu điểm là tái lập được kết quả.
+3. **Đơn hàng mô phỏng theo seed** (chế độ mặc định; hệ thống đã hỗ trợ nhập lô đơn thật từ
+   CSV), không phải lô đơn thật. Ưu điểm của chế độ seed là tái lập được kết quả.
 4. **A\* trên đồ thị đầy đủ**: nếu không có chặn, đường tối ưu luôn là đi thẳng, nên A\* chỉ
    thật sự có tác dụng khi mô phỏng kẹt xe (một số chặng xuyên tâm bị chặn, xe phải vòng).
 5. **Chưa có dữ liệu giao thông thời gian thực**, hệ số ùn tắc là giả định theo khung giờ.
@@ -223,8 +239,6 @@ Môi trường tái lập: `requirements-lock.txt` (+ `requirements-dev-lock.txt
 
 Repo dùng commit theo từng bước công việc nhỏ, chia theo mảng để lịch sử đọc được như nhật
 ký làm việc. Xem `docs/PLAN.md` để biết tiến độ.
-
-Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 ## Tài liệu
 
