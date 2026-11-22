@@ -482,9 +482,14 @@ function drawIncidentMarker(svg) {
   }
   if (!point) return;
   const layer = el("g", { class: "incident-marker" });
-  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 34, class: "inc-pulse" }));
-  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 24, fill: "none", stroke: "#b3261e", "stroke-width": 3, opacity: ".85" }));
-  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 14, fill: "#b3261e", stroke: "#fff", "stroke-width": 4 }));
+  const slug = state.incident.kind === "congestion" ? "ket-xe"
+    : state.incident.kind === "depot_closed" ? "kho-dong" : "xe-hong";
+  layer.appendChild(el("circle", { cx: point[0], cy: point[1], r: 40, class: "inc-pulse" }));
+  layer.appendChild(el("image", {
+    href: `/assets/markers/${slug}.svg`,
+    x: point[0] - 22, y: point[1] - 53, width: 44, height: 53,
+    class: "inc-pin", preserveAspectRatio: "xMidYMid meet",
+  }));
   const text = el("text", { x: point[0] + 30, y: point[1] + 6, class: "inc-label" });
   text.textContent = label;
   layer.appendChild(text);

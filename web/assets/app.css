@@ -1121,3 +1121,8 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 .violation:hover .v-level { margin-right: 20px; }
 
 
+
+/* v12: marker su co + sticker nhan vat */
+.inc-pin { pointer-events: none; filter: drop-shadow(0 3px 6px rgba(21,23,28,.28)); }
+.intro-sticker { width: 40px; height: 40px; object-fit: contain; display: block; margin-bottom: 2px; }
+.intro-sm { position: relative; }

@@ -110,9 +110,11 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 | `docs/ket-qua-luat.md` | Thống kê kích hoạt 12 luật trên ba kịch bản |
 | `docs/DATA.md` | Nguồn dữ liệu, giấy phép, cách tái tạo |
 | `docs/REVIEW.md` | Tự đánh giá điểm yếu và những gì đã khắc phục |
+| `docs/design-system/tailwind-snippets.md` | Snippet Tailwind (tương đương Dev Mode của Figma) |
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

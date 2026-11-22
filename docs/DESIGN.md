@@ -330,3 +330,25 @@ Banner trước đây chỉ sống trong modal chào mừng; giờ nó thành m�
 | Tooltip mặc định của trình duyệt ở bảng luật | Bỏ `title`, thay bằng mũi tên `↗` màu cam hiện dần khi hover, ngăn bằng `aria-label` |
 | Chữ dọc “NHÓM 14” | Đổi thành **“DuDu”** |
 
+
+## 17. Bản v12 — bộ tài sản thương hiệu và marker thiết kế
+
+Figma không có API cho phép bên ngoài điều khiển canvas, nên các tệp dưới đây là thứ
+thay thế: mọi thứ cần kéo vào Figma đều đã nằm trong repo, ở dạng layer vector hoặc PNG
+nền trong suốt.
+
+| Tài sản | Tệp | Cách dùng |
+|---|---|---|
+| Sticker 4 nhân vật | `web/assets/stickers/{dudu,gau-nau,gau-truc,gau-trang}.png` (640px, nền trong suốt) | Tách từ banner bằng `tools/make_stickers.py` (flood-fill nền kem, chạy offline, tất định). Kéo thẳng vào Figma hoặc dùng trong web |
+| Marker sự cố | `web/assets/markers/{xe-hong,ket-xe,kho-dong}.svg` (48×58) | Đã thay chấm tròn trên bản đồ: pin đỏ, viền kem, icon trắng (cờ lê / đèn giao thông / ổ khoá) |
+| Bộ icon giao vận | `web/assets/icons/*.svg` (truck, scooter, package, warehouse, clock, warning, route, chip) | `stroke="currentColor"` nên đổi màu bằng CSS, không cần xuất bản mới |
+| Bảng kéo vào Figma | `docs/design-system/figma-kit.png` | Ảnh tổng hợp sticker + marker + icon + bảng màu + component mẫu |
+| Snippet Tailwind | `docs/design-system/tailwind-snippets.md` | Tương đương Dev Mode: copy class cho nút, KPI, chip, badge, marker, mascot |
+
+Áp dụng vào giao diện:
+
+- Modal giới thiệu: ba thẻ đề tài nay dùng sticker Gấu Trắng / Gấu Trúc / Gấu Nâu thay cho
+  số 01–02–03 (đúng hình ảnh từng con đang làm nhiệm vụ trong banner).
+- Bản đồ: marker sự cố dùng pin SVG thay cho hai vòng tròn đồng tâm, giữ nguyên vòng pulse.
+
+`tools/make_stickers.py` là mã nguồn của bước tách nền, chạy lại được bất cứ lúc nào.
