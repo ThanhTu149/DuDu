@@ -58,6 +58,17 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
 | `GET /api/history` | 20 kế hoạch gần nhất (metadata + metrics tóm tắt) |
 | `GET /api/history/{id}` | khôi phục toàn bộ payload một kế hoạch |
 
+## Bảo mật
+
+`backend/security.py` gắn `SecurityMiddleware` vào app:
+
+- **API key tuỳ chọn**: biến `DUDU_API_KEY` — nếu đặt, mọi `/api/*` trừ `/api/health` phải có
+  header `X-API-Key`; thiếu/sai trả 401.
+- **Giới hạn tần suất**: `DUDU_RATE_LIMIT` request nặng/phút mỗi client (`X-Client-Id` hoặc IP),
+  áp cho `/api/plan*`, `/api/incident`, `/api/compare`; quá hạn trả 429 + `Retry-After`.
+- Thêm header `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
+- `/api/health` công khai và trả `security.auth_required`, `security.rate_limit_per_minute`.
+
 ## Kiểm tra dữ liệu vào
 
 Mọi endpoint POST dùng **Pydantic** để chặn dữ liệu sai trước khi chạy thuật toán:
@@ -190,4 +201,5 @@ sequenceDiagram
     A-->>API: kế hoạch sau sự cố + giải trình "A* tìm đường vòng ..."
     API-->>UI: JSON (metrics, routes, steps)
 ```
+
 

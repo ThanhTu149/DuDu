@@ -38,6 +38,7 @@ from .dispatch.network import load_network
 from .dispatch.routing import BASE_MINUTE, clock_label
 from .dispatch.rules import RULES
 from .dispatch.scenario import build_scenario, build_vehicles
+from .security import SecurityMiddleware, configured_api_key, configured_rate_limit
 
 logger = logging.getLogger("dudu.api")
 
@@ -109,6 +110,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# API key (nếu DUDU_API_KEY được đặt) + giới hạn tần suất endpoint nặng (DUDU_RATE_LIMIT/phút)
+app.add_middleware(SecurityMiddleware)
 
 net = load_network()
 _scenarios: OrderedDict[tuple[int, int, int], dict] = OrderedDict()
@@ -217,6 +220,10 @@ def health() -> dict:
             "orders": [ORDERS_MIN, ORDERS_MAX],
             "vehicles": [VEHICLES_MIN, VEHICLES_MAX],
             "seed": [SEED_MIN, SEED_MAX],
+        },
+        "security": {
+            "auth_required": bool(configured_api_key()),
+            "rate_limit_per_minute": configured_rate_limit(),
         },
     }
 

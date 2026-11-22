@@ -10,3 +10,7 @@ data/raw
 docs/hinh
 node_modules
 *.log
+data/processed/*.sqlite3
+data/processed/*.sqlite3-*
+tests/e2e/artifacts
+package-lock.json

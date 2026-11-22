@@ -59,6 +59,24 @@ python -m venv .venv
 Máy đã có sẵn Python đủ thư viện (không muốn tạo venv) thì bỏ qua bước 1 và thay
 `.venv\Scripts\python.exe` bằng `python`.
 
+### Bảo mật (tuỳ chọn)
+
+Mặc định web chạy mở như bản demo. Có thể bật bảo vệ bằng biến môi trường:
+
+```powershell
+# bắt buộc header X-API-Key cho mọi /api/* (trừ /api/health)
+$env:DUDU_API_KEY = "khoa-bi-mat"
+# tối đa 120 request nặng/phút cho mỗi client (mặc định 120)
+$env:DUDU_RATE_LIMIT = "120"
+```
+
+- Endpoint nặng bị đếm hạn mức: `/api/plan*`, `/api/incident`, `/api/compare`; quá hạn trả
+  **429** kèm `Retry-After`.
+- Response có `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`;
+  `/api/health` báo `security.auth_required` và `security.rate_limit_per_minute`.
+- Nhận diện client qua header `X-Client-Id` (nếu có) hoặc địa chỉ kết nối; triển khai thật nên
+  thay bằng IP sau proxy tin cậy.
+
 ### Docker (tuỳ chọn)
 
 ```powershell
@@ -68,7 +86,9 @@ docker run --rm -p 8000:8000 dudu
 ```
 
 Ảnh Docker dựa trên `python:3.11-slim`, có `HEALTHCHECK` gọi `/api/health`. Mô hình ETA và
-dữ liệu thô không nằm trong ảnh — thiếu mô hình thì web vẫn chạy bằng OSRM free-flow.
+dữ liệu thô không nằm trong ảnh — thiếu mô hình thì web vẫn chạy bằng OSRM free-flow. Ảnh đã
+được build và chạy thử thật: `/api/health` trả `ok`, lập kế hoạch 12 đơn và trang chủ HTTP 200;
+kích thước ảnh ~773 MB (phần lớn là scipy/pandas/scikit-learn dùng cho ML).
 
 ### Mô hình ETA (tuỳ chọn)
 
@@ -212,6 +232,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
