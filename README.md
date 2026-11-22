@@ -111,9 +111,11 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 | `docs/DATA.md` | Nguồn dữ liệu, giấy phép, cách tái tạo |
 | `docs/REVIEW.md` | Tự đánh giá điểm yếu và những gì đã khắc phục |
 | `docs/design-system/tailwind-snippets.md` | Snippet Tailwind (tương đương Dev Mode của Figma) |
+| `docs/WORKFLOW.md` | Quy ước: mọi thay đổi đều phải push; script `tools/push.ps1` tự kiểm thử rồi push |
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
