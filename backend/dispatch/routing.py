@@ -208,22 +208,74 @@ def two_opt(
     max_pass: int = 40,
     eta_model=None,
 ) -> tuple[list[tuple[str, str]], int]:
-    """Cải tiến 2-opt: đảo một đoạn nếu chi phí giảm. Trả về (thứ tự mới, số lần cải thiện)."""
-    best = list(sequence)
-    best_cost = sequence_score(net, start, best, speed_factor, orders_by_id, late_penalty, start_min, eta_model)
+    """Cải tiến 2-opt: đảo một đoạn nếu chi phí giảm. Trả về (thứ tự mới, số lần cải thiện).
+
+    Để chạy được ca 200 đơn (~25 điểm/tuyến), chi phí từng phương án được tính bằng
+    các mảng cục bộ (ma trận chặng, giờ hẹn, thời gian phục vụ) thay vì gọi lại
+    `sequence_score` cho mỗi lần đảo — cùng công thức, cùng thứ tự cộng, nên kết quả
+    giống hệt bản cũ (đã đối chiếu bằng test hồi quy).
+    """
+    size = len(sequence)
+    if size < 3:
+        return list(sequence), 0
+
+    hubs = [start] + [hub_id for _order_id, hub_id in sequence]
+    # leg[a][b] = số phút từ hubs[a] tới điểm b (điểm 0 là sequence[0])
+    leg = [[0.0] * size for _ in range(size + 1)]
+    for a in range(size + 1):
+        row = leg[a]
+        hub_a = hubs[a]
+        for b in range(size):
+            row[b] = net.dur_min(hub_a, hubs[b + 1]) * speed_factor
+
+    due = [0.0] * size
+    service = [0.0] * size
+    if orders_by_id is not None:
+        for index, (order_id, _hub) in enumerate(sequence):
+            order = orders_by_id[order_id]
+            due[index] = start_min + order["promised_min"]
+            service[index] = order["service_min"]
+    multipliers = None
+    if eta_model is not None:
+        # Tái hiện đúng cách sequence_score cũ gọi eta_model.hour_factor(clock)
+        multipliers = [eta_model.hour_factor(hour) for hour in range(24)]
+    penalise = bool(orders_by_id is not None and late_penalty)
+
+    def score(order_indices: list[int]) -> float:
+        clock = start_min
+        travel = 0.0
+        lateness = 0.0
+        previous = 0
+        for index in order_indices:
+            minutes = leg[previous][index]
+            if multipliers is not None:
+                minutes *= multipliers[int(clock) % 24]
+            clock += minutes
+            travel += minutes
+            if penalise:
+                late = clock - due[index]
+                if late > 0:
+                    lateness += late
+            clock += service[index]
+            previous = index + 1  # hubs[index + 1] là nút của điểm vừa ghé
+        return travel + late_penalty * lateness
+
+    order_indices = list(range(size))
+    best_indices = list(order_indices)
+    best_cost = score(best_indices)
     improvements = 0
     for _ in range(max_pass):
         improved = False
-        for i in range(len(best) - 1):
-            for j in range(i + 1, len(best)):
-                candidate = best[:i] + list(reversed(best[i : j + 1])) + best[j + 1 :]
-                cost = sequence_score(net, start, candidate, speed_factor, orders_by_id, late_penalty, start_min, eta_model)
+        for i in range(size - 1):
+            for j in range(i + 1, size):
+                candidate = best_indices[:i] + best_indices[i : j + 1][::-1] + best_indices[j + 1 :]
+                cost = score(candidate)
                 if cost + 1e-6 < best_cost:
-                    best, best_cost, improved = candidate, cost, True
+                    best_indices, best_cost, improved = candidate, cost, True
                     improvements += 1
         if not improved:
             break
-    return best, improvements
+    return [sequence[index] for index in best_indices], improvements
 
 
 def schedule_route(

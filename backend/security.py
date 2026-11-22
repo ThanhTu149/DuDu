@@ -77,6 +77,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; "
+            "img-src 'self' data:; script-src 'self'; connect-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com",
+        )
         return response
 
     def _consume(self, client: str) -> int | None:

@@ -86,6 +86,9 @@ class TestSecurity(unittest.TestCase):
         response = self.client.get("/api/health")
         self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(response.headers.get("Referrer-Policy"), "no-referrer")
+        policy = response.headers.get("Content-Security-Policy", "")
+        self.assertIn("default-src 'self'", policy)
+        self.assertIn("script-src 'self'", policy)
 
     def test_health_rate_limit_config_reported(self) -> None:
         os.environ["DUDU_RATE_LIMIT"] = "30"
@@ -95,3 +98,4 @@ class TestSecurity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

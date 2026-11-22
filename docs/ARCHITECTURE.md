@@ -69,7 +69,8 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
   header `X-API-Key`; thiếu/sai trả 401.
 - **Giới hạn tần suất**: `DUDU_RATE_LIMIT` request nặng/phút mỗi client (`X-Client-Id` hoặc IP),
   áp cho `/api/plan*`, `/api/incident`, `/api/compare`; quá hạn trả 429 + `Retry-After`.
-- Thêm header `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
+- Thêm header `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `Content-Security-Policy` (script-src self, style-src self + unsafe-inline, font Google).
 - `/api/health` công khai và trả `security.auth_required`, `security.rate_limit_per_minute`.
 
 ## Kiểm tra dữ liệu vào
@@ -204,6 +205,7 @@ sequenceDiagram
     A-->>API: kế hoạch sau sự cố + giải trình "A* tìm đường vòng ..."
     API-->>UI: JSON (metrics, routes, steps)
 ```
+
 
 
 

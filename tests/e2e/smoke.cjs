@@ -31,7 +31,11 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
   const pageErrors = [];
   const badResponses = [];
+  const consoleErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
   page.on("response", (response) => {
     if (response.status() >= 400) {
       badResponses.push(`${response.status()} ${response.url()}`);
@@ -41,7 +45,29 @@ async function main() {
   const steps = [];
   try {
     await page.addInitScript(() => localStorage.setItem("dudu_intro_seen", "1"));
-    await page.goto(BASE_URL, { waitUntil: "networkidle" });
+    const documentResponse = await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+    // 0. Header bảo mật + kiểm tra a11y cơ bản (ảnh có alt, nút có tên, id không trùng)
+    const csp = documentResponse?.headers()["content-security-policy"] || "";
+    if (!csp.includes("default-src 'self'")) fail(`thiếu Content-Security-Policy: ${csp}`);
+    const a11yIssues = await page.evaluate(() => {
+      const issues = [];
+      if (document.documentElement.lang !== "vi") issues.push("html thiếu lang=vi");
+      for (const image of document.querySelectorAll("img")) {
+        if (!image.hasAttribute("alt")) issues.push(`img thiếu alt: ${image.getAttribute("src")}`);
+      }
+      for (const button of document.querySelectorAll("button")) {
+        const name = (button.textContent || "").trim()
+          || button.getAttribute("aria-label") || button.getAttribute("title");
+        if (!name) issues.push(`button thiếu tên: #${button.id || "(không id)"}`);
+      }
+      const ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
+      const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+      if (duplicates.length) issues.push(`id trùng: ${[...new Set(duplicates)].join(", ")}`);
+      return issues;
+    });
+    if (a11yIssues.length) fail(`a11y: ${a11yIssues.join(" | ")}`);
+    steps.push("csp+a11y");
 
     // 1. Lập kế hoạch mặc định
     await page.click("#plan-btn");
@@ -79,6 +105,7 @@ async function main() {
     steps.push("csv-import");
 
     if (pageErrors.length) fail(`lỗi JS: ${pageErrors.join(" | ")}`);
+    if (consoleErrors.length) fail(`console error: ${consoleErrors.join(" | ")}`);
     if (badResponses.length) fail(`response lỗi: ${badResponses.join(" | ")}`);
 
     console.log(JSON.stringify({ ok: true, baseUrl: BASE_URL, steps, historyCount }));

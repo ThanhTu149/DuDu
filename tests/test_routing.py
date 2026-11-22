@@ -55,6 +55,42 @@ class TestRoutingOnScenario(unittest.TestCase):
         self.assertGreaterEqual(improvements, 0)
         self.assertEqual(sorted(item[0] for item in improved), sorted(item[0] for item in sequence))
 
+    def test_two_opt_matches_reference_implementation(self) -> None:
+        """Bản 2-opt tối ưu (mảng cục bộ) phải cho đúng thứ tự như bản tham chiếu chậm."""
+        if len(self.dests) < 4:
+            self.skipTest("cần ít nhất bốn điểm để đảo chặng")
+        from backend.dispatch.routing import DEFAULT_LATE_PENALTY
+
+        by_id = {order["id"]: order for order in self.assignment[self.vehicle["id"]]}
+        start = self.vehicle["start_hub"]
+        speed = self.vehicle["speed_factor"]
+        sequence = nearest_neighbor(self.net, start, self.dests, speed)
+
+        best = list(sequence)
+        best_cost = sequence_score(
+            self.net, start, best, speed, by_id, DEFAULT_LATE_PENALTY, BASE_MINUTE, None
+        )
+        improvements = 0
+        for _ in range(40):
+            improved = False
+            for i in range(len(best) - 1):
+                for j in range(i + 1, len(best)):
+                    candidate = best[:i] + list(reversed(best[i : j + 1])) + best[j + 1 :]
+                    cost = sequence_score(
+                        self.net, start, candidate, speed, by_id, DEFAULT_LATE_PENALTY, BASE_MINUTE, None
+                    )
+                    if cost + 1e-6 < best_cost:
+                        best, best_cost, improved = candidate, cost, True
+                        improvements += 1
+            if not improved:
+                break
+
+        new_sequence, new_improvements = two_opt(
+            self.net, start, sequence, speed, by_id, DEFAULT_LATE_PENALTY, BASE_MINUTE
+        )
+        self.assertEqual(new_sequence, best)
+        self.assertEqual(new_improvements, improvements)
+
     def test_route_length_matches_sum_of_legs(self) -> None:
         # route_length trả về tổng thời gian di chuyển (phút), chưa gồm thời gian phục vụ
         hubs = [self.vehicle["start_hub"]] + [hub for _, hub in self.dests]

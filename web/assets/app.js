@@ -2215,8 +2215,9 @@ async function loadEtaInfo() {
           <input id="boot-api-key" type="password" placeholder="Nhập API key của server"
                  style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)" />
           <button class="btn btn-primary" type="submit">Lưu &amp; tải lại</button>
-        </form>` : `<button class="btn btn-primary" onclick="location.reload()">Tải lại trang</button>`}
+        </form>` : `<button id="boot-reload" class="btn btn-primary" type="button">Tải lại trang</button>`}
     </div>`;
+    document.getElementById("boot-reload")?.addEventListener("click", () => location.reload());
     const keyForm = document.getElementById("boot-key-form");
     if (keyForm) {
       keyForm.addEventListener("submit", (event) => {

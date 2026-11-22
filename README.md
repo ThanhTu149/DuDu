@@ -75,7 +75,9 @@ $env:DUDU_RATE_LIMIT = "120"
 
 - Endpoint nặng bị đếm hạn mức: `/api/plan*`, `/api/incident`, `/api/compare`; quá hạn trả
   **429** kèm `Retry-After`.
-- Response có `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`;
+- Response có `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` và
+  **Content-Security-Policy** (script chỉ từ chính web, font Google được cho phép, inline style
+  cho phép vì UI dùng style attribute);
   `/api/health` báo `security.auth_required` và `security.rate_limit_per_minute`.
 - Nhận diện client qua header `X-Client-Id` (nếu có) hoặc địa chỉ kết nối; triển khai thật nên
   thay bằng IP sau proxy tin cậy.
@@ -248,6 +250,8 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
+
 
 
 

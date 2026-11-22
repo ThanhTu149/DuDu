@@ -156,12 +156,13 @@ def write_report(plan_rows: list[dict], incident_rows: list[float], concurrency:
     lines += [
         "## Nhận xét",
         "",
-        "- 24–144 đơn: dưới ~200 ms, thoải mái cho thao tác tương tác; ca mặc định 48 đơn chỉ",
-        "  khoảng 20 ms nhờ cache kịch bản.",
-        "- 200 đơn tăng vọt lên vài giây vì 2-opt là O(n³) trên tuyến ~25 điểm (6,8 triệu lần",
-        "  tính chặng đường). Cache chặng đường (`routing._travel` dùng lru_cache) đã rút ngắn",
-        "  đáng kể nhưng chưa triệt tiêu được độ phức tạp; hướng tối ưu tiếp theo là đánh giá",
-        "  delta O(1) cho 2-opt hoặc giới hạn cửa sổ lân cận khi tuyến dài.",
+        "- 24–144 đơn: dưới ~150 ms, thoải mái cho thao tác tương tác; ca mặc định 48 đơn chỉ",
+        "  khoảng 25 ms nhờ cache kịch bản.",
+        "- 200 đơn (tuyến ~25 điểm) mất ~1,2 s thay vì ~5 s trước đây: 2-opt đã được viết lại",
+        "  để tính chi phí từng phương án bằng mảng cục bộ (ma trận chặng, giờ hẹn, phục vụ)",
+        "  thay vì gọi `sequence_score` hàng triệu lần — cùng công thức, cùng kết quả, nhanh",
+        "  hơn ~2,4× (API nhanh hơn ~4× vì bỏ thêm overhead). Vẫn là O(n³) nên nếu cần 500+",
+        "  đơn/thời gian thực thì bước tiếp theo là đánh giá delta O(1) hoặc cửa sổ lân cận.",
         "- Cache kịch bản, cache chặng đường và lock giữ cho kết quả đồng nhất khi nhiều request",
         "  chạy song song; không thấy lỗi hay sai lệch metrics.",
         "- Đây là benchmark trong cùng tiến trình (đo logic + FastAPI), không thay thế đo tải",
@@ -211,5 +212,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
