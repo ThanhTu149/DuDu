@@ -6,6 +6,8 @@ DuDu là một bảng điều phối (dispatch console) cho bài toán giao hàn
 nhận đơn → dự đoán thời gian giao (ETA) → chia đơn cho tài xế → xếp tuyến → kiểm tra
 ràng buộc vận hành và giải trình lại quyết định.
 
+Ngoài dữ liệu sinh theo seed, hệ thống nhận **đơn hàng thật từ CSV** (tối đa 200 dòng, kiểm
+tra từng dòng), lưu **lịch sử kế hoạch** vào SQLite và có endpoint khôi phục lại kế hoạch cũ.
 Đề tài phát triển từ các gợi ý **31 (tối ưu tuyến đường), 32 (dự đoán ETA), 33 (phân bổ
 đơn hàng)** trong danh sách đề tài của học phần.
 
@@ -184,6 +186,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 | `docs/ket-qua-do-ben.md` | 30 seed, so sánh chiến lược, độ nhạy tham số |
 | `docs/ket-qua-eta-nang-cao.md` | Tuning CV, khoảng tin cậy 80%, ablation đặc trưng ETA |
 | `docs/ket-qua-hieu-nang.md` | Độ trễ API theo số đơn, gọi đồng thời, giới hạn hiệu năng |
+| `docs/import-csv.md` | Định dạng CSV nhập đơn, API lịch sử kế hoạch, file mẫu |
 | `docs/DATA.md` | Nguồn dữ liệu, giấy phép, cách tái tạo |
 | `docs/REVIEW.md` | Tự đánh giá điểm yếu và những gì đã khắc phục |
 | `docs/design-system/tailwind-snippets.md` | Snippet Tailwind (tương đương Dev Mode của Figma) |
@@ -191,6 +194,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

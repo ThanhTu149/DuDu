@@ -272,7 +272,18 @@ function initMapControls() {
 
 async function api(path, options) {
   const response = await fetch(path, options);
-  if (!response.ok) throw new Error(`${response.status} ${path}`);
+  if (!response.ok) {
+    let message = `${response.status} ${path}`;
+    try {
+      const body = await response.json();
+      if (body && body.detail) {
+        message = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
+    } catch {
+      /* body không phải JSON — giữ thông báo mặc định */
+    }
+    throw new Error(message);
+  }
   return response.json();
 }
 
@@ -1479,6 +1490,41 @@ function paintPlan(plan) {
   updateMascotFromPlan();
 }
 
+async function importCsvPlan(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const button = $("#import-btn");
+  button.disabled = true;
+  button.classList.add("is-busy");
+  try {
+    const csv = await file.text();
+    const plan = await api("/api/plan/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        csv,
+        seed: Number($("#seed").value) || 7,
+        vehicles: (state.scenario && state.scenario.vehicles.length) || 8,
+        eta: $("#use-ml").checked ? "ml" : "osrm",
+      }),
+    });
+    paintPlan(plan);
+    updateMascotFromPlan();
+    const count = plan.import?.count ?? plan.metrics.orders;
+    const skipped = plan.import?.warnings?.length || 0;
+    toast(`Đã nhập ${count} đơn từ CSV: ${fmtKm(plan.metrics.total_km)} km · ${plan.metrics.late_count} trễ`
+      + (skipped ? ` · ${skipped} dòng bị bỏ qua` : ""));
+    if (skipped) console.warn("CSV warnings:", plan.import.warnings);
+  } catch (error) {
+    toast(`Không nhập được CSV: ${error.message}`, "error");
+  } finally {
+    input.value = "";
+    button.disabled = false;
+    button.classList.remove("is-busy");
+  }
+}
+
 async function runPlan() {
   const button = $("#plan-btn");
   button.disabled = true;
@@ -1772,6 +1818,8 @@ async function loadEtaInfo() {
   await loadEtaInfo();
 
   $("#plan-btn").addEventListener("click", runPlan);
+  $("#import-btn")?.addEventListener("click", () => $("#import-file")?.click());
+  $("#import-file")?.addEventListener("change", importCsvPlan);
   $("#compare-btn").addEventListener("click", openCompare);
   $("#export-btn").addEventListener("click", exportCsv);
   $("#print-btn").addEventListener("click", printPlan);

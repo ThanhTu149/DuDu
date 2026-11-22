@@ -82,6 +82,14 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn('[data-theme="dark"]', css)
         self.assertIn("--surface:", css.split('[data-theme="dark"]', 1)[1])
 
+    def test_csv_import_wired(self) -> None:
+        html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="import-btn"', html)
+        self.assertIn('id="import-file"', html)
+        js = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("/api/plan/import", js)
+        self.assertIn("importCsvPlan", js)
+
     def test_map_legend_matches_symbols(self) -> None:
         # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
         html = (WEB / "index.html").read_text(encoding="utf-8")
@@ -115,6 +123,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

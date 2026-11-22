@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import random
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -29,10 +30,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .dispatch.agent import DispatcherAgent
 from .dispatch.evaluate import compare_routing, compare_strategies
+from .dispatch.history import get as history_get
+from .dispatch.history import recent as history_recent
+from .dispatch.history import save as history_save
+from .dispatch.import_orders import parse_orders_csv
 from .dispatch.network import load_network
 from .dispatch.routing import BASE_MINUTE, clock_label
 from .dispatch.rules import RULES
-from .dispatch.scenario import build_scenario
+from .dispatch.scenario import build_scenario, build_vehicles
 
 logger = logging.getLogger("dudu.api")
 
@@ -41,6 +46,7 @@ WEB_DIR = ROOT / "web"
 GEOMETRY_CACHE = ROOT / "data" / "processed" / "geometry.json"
 ETA_MODEL_FILE = ROOT / "ml" / "models" / "eta_rf.joblib"
 ETA_METRICS_FILE = ROOT / "ml" / "models" / "eta_metrics.json"
+SAMPLE_ORDERS_CSV = ROOT / "data" / "samples" / "don-hang-mau.csv"
 
 # Biên dữ liệu vào — dùng chung cho mọi endpoint để không chỗ nào lỏng hơn chỗ khác.
 ORDERS_MIN, ORDERS_MAX = 8, 200
@@ -74,6 +80,19 @@ class IncidentRequest(PlanRequest):
     # /api/incident trước đây nhận đủ bộ ba seed/orders/vehicles như plan
     orders: int = Field(48, ge=ORDERS_MIN, le=ORDERS_MAX)
     vehicles: int = Field(8, ge=VEHICLES_MIN, le=VEHICLES_MAX)
+
+
+class ImportPlanRequest(BaseModel):
+    """Kế hoạch từ danh sách đơn nhập tay (CSV dạng chuỗi, tối đa 200 dòng)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    csv: str = Field(min_length=1, max_length=200_000)
+    seed: int = Field(7, ge=SEED_MIN, le=SEED_MAX)
+    vehicles: int = Field(8, ge=VEHICLES_MIN, le=VEHICLES_MAX)
+    assignment: AssignmentName = "hungarian"
+    routing: RoutingName = "deadline"
+    eta: EtaSource = "osrm"
 
 
 @asynccontextmanager
@@ -250,7 +269,65 @@ def plan(payload: PlanRequest | None = None) -> dict:
             "Chưa có mô hình ETA trên máy này — kế hoạch đang tính theo OSRM free-flow. "
             "Chạy python ml/train_eta.py để bật hiệu chỉnh ùn tắc."
         )
+    result["history_id"] = history_save("plan", request.model_dump(), result)
     return result
+
+
+@app.post("/api/plan/import")
+def plan_import(payload: ImportPlanRequest) -> dict:
+    """Lập kế hoạch từ CSV: kiểm tra từng dòng, bỏ dòng lỗi kèm cảnh báo."""
+    try:
+        parsed = parse_orders_csv(payload.csv, net, seed=payload.seed)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"CSV không hợp lệ: {exc}") from exc
+
+    vehicles = build_vehicles(random.Random(payload.seed), payload.vehicles)
+    model = eta_model() if payload.eta == "ml" else None
+    result = DispatcherAgent(
+        net,
+        [vehicle.as_dict() for vehicle in vehicles],
+        parsed["orders"],
+        assignment_strategy=payload.assignment,
+        routing_strategy=payload.routing,
+        eta_model=model,
+    ).plan()
+    result["seed"] = payload.seed
+    result["start_label"] = clock_label(BASE_MINUTE)
+    result["warnings"] = []
+    if payload.eta == "ml" and model is None:
+        result["warnings"].append(
+            "Chưa có mô hình ETA trên máy này — kế hoạch đang tính theo OSRM free-flow."
+        )
+    result["import"] = {"count": parsed["count"], "warnings": parsed["warnings"]}
+    result["history_id"] = history_save(
+        "import", {"seed": payload.seed, "vehicles": payload.vehicles, "rows": parsed["count"]}, result
+    )
+    return result
+
+
+@app.get("/api/orders/template")
+def orders_template():
+    """Tải file CSV mẫu để người dùng điền đơn."""
+    if not SAMPLE_ORDERS_CSV.exists():
+        raise HTTPException(status_code=404, detail="chưa có file mẫu")
+    return FileResponse(
+        SAMPLE_ORDERS_CSV,
+        media_type="text/csv; charset=utf-8",
+        filename="don-hang-mau.csv",
+    )
+
+
+@app.get("/api/history")
+def history_list(limit: int = Query(20, ge=1, le=100)) -> dict:
+    return {"items": history_recent(limit)}
+
+
+@app.get("/api/history/{plan_id}")
+def history_detail(plan_id: int) -> dict:
+    record = history_get(plan_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="không có bản ghi lịch sử này")
+    return record
 
 
 @app.get("/api/eta/info")
@@ -316,11 +393,13 @@ def incident(payload: IncidentRequest) -> dict:
         assignment_strategy=payload.assignment,
         routing_strategy=payload.routing,
     ).handle_incident(payload.kind, vehicle_id, hub_id)
-    return {
+    record = {
         "before": before,
         "incident": {"kind": payload.kind, "vehicle_id": vehicle_id, "hub_id": hub_id},
         **result,
     }
+    record["history_id"] = history_save("incident", payload.model_dump(), record)
+    return record
 
 
 @app.get("/api/compare")

@@ -26,3 +26,7 @@ ml/models/*.joblib
 
 # Dataset ETA sinh lại bằng ml/build_dataset.py
 data/processed/eta_*.csv
+
+# Lịch sử kế hoạch (SQLite sinh khi chạy web)
+data/processed/*.sqlite3
+data/processed/*.sqlite3-*
