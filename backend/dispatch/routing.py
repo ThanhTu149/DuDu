@@ -12,6 +12,8 @@ Có hai hàm mục tiêu để 2-opt tối ưu, và đây cũng là một thí n
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from dataclasses import dataclass, field
 
 from .network import Network
@@ -71,8 +73,13 @@ class Route:
         }
 
 
+@lru_cache(maxsize=4096)
 def _travel(net: Network, a: str, b: str, speed_factor: float) -> tuple[float, float]:
-    """(phút, km) giữa 2 nút, đã nhân hệ số chậm của loại xe."""
+    """(phút, km) giữa 2 nút, đã nhân hệ số chậm của loại xe.
+
+    Có cache vì 2-opt gọi hàm này hàng triệu lần cho cùng một cặp nút — kết quả trả về
+    hoàn toàn giống bản không cache (cùng phép tính, cache chỉ bỏ lặp lại).
+    """
     return net.dur_min(a, b) * speed_factor, net.dist(a, b) / 1000.0
 
 

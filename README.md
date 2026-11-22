@@ -120,6 +120,9 @@ python ml/advanced_eval.py --report             # -> docs/ket-qua-eta-nang-cao.m
 - **Cơ sở luật** (`docs/co-luat.md`): nguồn nghiệp vụ, ma trận xung đột ưu tiên và bảng đối
   chiếu 21 ca kiểm thử cho R01–R12; `docs/ARCHITECTURE.md` có 4 sơ đồ Mermaid (kiến trúc, vòng
   đời tác tử, luồng dữ liệu, xử lý sự cố bằng A*).
+- **Hiệu năng API** (`docs/ket-qua-hieu-nang.md`): 48 đơn ~16 ms, 96 đơn ~91 ms, 144 đơn
+  ~180 ms, 200 đơn ~5,2 s (2-opt O(n³) trên tuyến dài); 8 luồng × 5 request không lỗi, kết
+  quả nhất quán nhờ cache + lock. Chạy lại bằng `python tools/bench_api.py --report`.
 
 ## Kiểm thử tự động
 
@@ -180,6 +183,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 | `docs/ket-qua-toi-uu.md` | Optimality gap phần xếp tuyến (Held–Karp) |
 | `docs/ket-qua-do-ben.md` | 30 seed, so sánh chiến lược, độ nhạy tham số |
 | `docs/ket-qua-eta-nang-cao.md` | Tuning CV, khoảng tin cậy 80%, ablation đặc trưng ETA |
+| `docs/ket-qua-hieu-nang.md` | Độ trễ API theo số đơn, gọi đồng thời, giới hạn hiệu năng |
 | `docs/DATA.md` | Nguồn dữ liệu, giấy phép, cách tái tạo |
 | `docs/REVIEW.md` | Tự đánh giá điểm yếu và những gì đã khắc phục |
 | `docs/design-system/tailwind-snippets.md` | Snippet Tailwind (tương đương Dev Mode của Figma) |
@@ -187,6 +191,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
