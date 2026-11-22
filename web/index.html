@@ -3,11 +3,21 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="DuDu — Hệ thống điều phối và tối ưu giao hàng nội thành TP.HCM. Chia đơn, xếp tuyến, giữ cam kết giờ giao." />
+<meta name="theme-color" content="#15171c" />
+<meta property="og:title" content="DuDu — Điều phối giao hàng nội thành" />
+<meta property="og:description" content="Hệ thống tối ưu tuyến giao hàng nội thành TP.HCM — chia đơn, xếp tuyến, giữ cam kết giờ giao." />
+<meta property="og:type" content="website" />
 <title>DuDu — Điều phối giao hàng nội thành</title>
-<link rel="icon" href="/assets/avatar.jpg" type="image/jpeg" />
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/assets/avatar.jpg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/assets/app.css" />
 </head>
 <body>
+<a href="#map" class="skip-link">Bỏ qua tới bản đồ</a>
 <div class="app">
 
   <aside class="rail">
@@ -49,6 +59,9 @@
       </div>
 
       <div class="controls">
+        <button id="theme-btn" class="btn btn-quiet" aria-label="Chuyển sáng/tối" title="Chuyển sáng/tối">
+          <svg id="theme-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;fill:currentColor"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 16V5a7 7 0 1 1 0 14Z"/></svg>
+        </button>
         <div class="config-wrap">
           <button id="config-btn" class="btn btn-quiet" aria-expanded="false" aria-controls="config-pop">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm8.4 4.9.1-.9-.1-.9 2-1.6-1.9-3.3-2.4 1a7.6 7.6 0 0 0-1.6-.9l-.4-2.6h-3.8l-.4 2.6c-.6.2-1.1.5-1.6.9l-2.4-1L3.9 11.4l2 1.6-.1.9.1.9-2 1.6 1.9 3.3 2.4-1c.5.4 1 .7 1.6.9l.4 2.6h3.8l.4-2.6c.6-.2 1.1-.5 1.6-.9l2.4 1 1.9-3.3-2-1.6Z"/></svg>
@@ -253,14 +266,26 @@
   </div>
 </div>
 
+<!-- Mobile bottom nav (shown only < 900px when rail is hidden) -->
+<nav class="mobile-nav" aria-label="Điều hướng di động">
+  <button class="mob-btn is-active" data-view="dispatch" aria-label="Điều phối">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h2V9H4v9Zm7 0h2V6h-2v12Zm7 0h2V12h-2v6Z"/></svg>
+    <span>Điều phối</span>
+  </button>
+  <button class="mob-btn" data-view="orders" aria-label="Đơn hàng">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h10v2H4v-2Z"/></svg>
+    <span>Đơn hàng</span>
+  </button>
+  <button class="mob-btn" data-view="rules" aria-label="Tri thức">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Zm10 1.5V8h2.5L15 5.5Z"/></svg>
+    <span>Tri thức</span>
+  </button>
+  <button class="mob-btn" data-view="compare" aria-label="So sánh">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4V10H4v10Zm6 0h4V4h-4v16Zm6 0h4v-7h-4v7Z"/></svg>
+    <span>So sánh</span>
+  </button>
+</nav>
+
 <script src="/assets/app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
