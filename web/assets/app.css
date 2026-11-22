@@ -33,6 +33,14 @@
 
 * { box-sizing: border-box; }
 
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--accent); color: #fff; padding: 8px 16px; border-radius: 0 0 8px 0;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.skip-link:focus { left: 0; }
+
 html, body { height: 100%; }
 
 body {
@@ -1164,4 +1172,99 @@ table.cmp td.bad { color: var(--alert); font-weight: 600; }
 .drawer-empty img { width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(21,23,28,.14)); }
 .steps-empty { display: flex; align-items: center; gap: 10px; padding: 14px 16px; color: var(--ink-2); font-size: 12.5px; }
 .steps-empty img { width: 42px; height: 42px; object-fit: contain; }
+
+/* ============ Mobile bottom navigation ============ */
+.mobile-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 45;
+  background: var(--paper-2); border-top: 1px solid var(--line);
+  padding: 4px 0 max(4px, env(safe-area-inset-bottom));
+  justify-content: space-around;
+  box-shadow: 0 -4px 16px rgba(21,23,28,.08);
+}
+.mob-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 0; background: transparent; color: var(--ink-3);
+  font-size: 10px; padding: 6px 12px; cursor: pointer;
+  font-family: var(--sans); font-weight: 500;
+}
+.mob-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.mob-btn.is-active { color: var(--accent); }
+.mob-btn:hover { color: var(--ink-2); }
+@media (max-width: 900px) {
+  .mobile-nav { display: flex; }
+  body { padding-bottom: 56px; }
+}
+@media print { .mobile-nav { display: none !important; } }
+
+/* ============ Dark mode ============ */
+[data-theme="dark"] {
+  --paper: #1a1a1f;
+  --paper-2: #222228;
+  --ink: #e8e4dc;
+  --ink-2: #b0a89e;
+  --ink-3: #8a8278;
+  --line: #3a3a42;
+  --line-soft: #2e2e36;
+  --accent: #e5632a;
+  --accent-soft: #3d2518;
+  --teal: #4ead82;
+  --teal-soft: #1a3328;
+  --alert: #ef5350;
+  --alert-soft: #3d1c1a;
+  --amber: #f0b429;
+}
+[data-theme="dark"] .rail { background: #111115; }
+[data-theme="dark"] .mark { background: #111115; border-color: #3a3f47; }
+[data-theme="dark"] .route { background: #2a2a32; }
+[data-theme="dark"] .route:hover { border-color: #4a4a52; }
+[data-theme="dark"] .route.is-active { background: #2f2520; }
+[data-theme="dark"] .search { background: #2a2a32; border-color: var(--line); }
+[data-theme="dark"] .search input { color: var(--ink); }
+[data-theme="dark"] .popover { background: #2a2a32; }
+[data-theme="dark"] .modal-card { background: #2a2a32; }
+[data-theme="dark"] .modal-card header { background: #2a2a32; }
+[data-theme="dark"] .drawer { background: #222228; }
+[data-theme="dark"] .intro-card { background: #2a2820; border-color: #3a3832; }
+[data-theme="dark"] .intro-sm { background: #2a2a32; border-color: #3a3832; }
+[data-theme="dark"] .intro-actions { background: #2a2820; }
+[data-theme="dark"] .intro-close { background: rgba(21,23,28,.7); }
+[data-theme="dark"] .incident-bar { background: #2d2218; }
+[data-theme="dark"] .incident-cell { background: #2d2218; }
+[data-theme="dark"] .mascot { background: rgba(34,34,40,.95); border-color: #3a3a42; }
+[data-theme="dark"] .mascot-pill { background: rgba(34,34,40,.96); border-color: #3a3a42; }
+[data-theme="dark"] .mascot-photo { background: #2a2820; }
+[data-theme="dark"] .mobile-nav { background: #1a1a1f; }
+[data-theme="dark"] .map-btn { background: rgba(42,42,50,.92); }
+[data-theme="dark"] .map-card { background: #2a2a32; }
+[data-theme="dark"] .city-hull { fill: rgba(255,255,255,.03); stroke: #3a3a42; }
+[data-theme="dark"] .hub-label { fill: #b0a89e; stroke: #222228; }
+[data-theme="dark"] .district-label { fill: #8a8278; stroke: #222228; }
+[data-theme="dark"] .leg-base { stroke: #3a3a42; }
+[data-theme="dark"] .grid-line { stroke: #2e2e36; }
+[data-theme="dark"] .pop-row input, [data-theme="dark"] .pop-row select { background: #1a1a1f; border-color: #3a3a42; color: var(--ink); }
+[data-theme="dark"] .orders-table tbody tr:hover { background: #2d2218; }
+[data-theme="dark"] .kpi-strip { background: #222228; }
+[data-theme="dark"] .topbar { background: #222228; }
+[data-theme="dark"] * { scrollbar-color: #4a4a52 transparent; }
+[data-theme="dark"] *::-webkit-scrollbar-thumb { background: #4a4a52; }
+
+/* auto dark mode from system */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1a1a1f;
+    --paper-2: #222228;
+    --ink: #e8e4dc;
+    --ink-2: #b0a89e;
+    --ink-3: #8a8278;
+    --line: #3a3a42;
+    --line-soft: #2e2e36;
+    --accent: #e5632a;
+    --accent-soft: #3d2518;
+    --teal: #4ead82;
+    --teal-soft: #1a3328;
+    --alert: #ef5350;
+    --alert-soft: #3d1c1a;
+    --amber: #f0b429;
+  }
+}
 

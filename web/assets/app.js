@@ -4,6 +4,41 @@
 const $ = (sel) => document.querySelector(sel);
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+/* XSS protection: escape HTML entities in user/API data before innerHTML */
+function esc(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* Focus trap for modals/drawers (accessibility) */
+function trapFocus(container) {
+  const focusable = container.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  first.focus();
+  const handler = (e) => {
+    if (e.key !== "Tab") return;
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  container.addEventListener("keydown", handler);
+  container._trapCleanup = () => container.removeEventListener("keydown", handler);
+}
+function releaseFocus(container) {
+  if (container._trapCleanup) { container._trapCleanup(); delete container._trapCleanup; }
+}
+
 const W = 1000;
 const H = 640;
 const PAD = 56;
@@ -20,6 +55,7 @@ const ROUTE_COLORS = (() => {
 
 const state = {
   hubs: [],
+  hubsById: new Map(),
   bounds: null,
   scenario: null,
   plan: null,
@@ -33,6 +69,11 @@ const state = {
 };
 
 /* ---------------------------------------------------------------- helpers */
+function debounce(fn, ms = 150) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
 const viNum = (value, digits = 0) =>
   Number(value).toLocaleString("vi-VN", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
@@ -160,9 +201,9 @@ function initMapControls() {
   svg.addEventListener("pointerup", stop);
   svg.addEventListener("pointercancel", stop);
 
-  window.addEventListener("resize", () => {
+  window.addEventListener("resize", debounce(() => {
     if (!document.fullscreenElement) fitView();
-  });
+  }, 120));
   document.addEventListener("fullscreenchange", () => setTimeout(fitView, 80));
   fitView();
 }
@@ -368,8 +409,8 @@ async function geometryFor(a, b) {
 function legPoints(fromId, toId) {
   const cached = state.geometry.get(`${fromId}|${toId}`);
   if (Array.isArray(cached) && cached.length) return cached;
-  const a = state.hubs.find((hub) => hub.id === fromId);
-  const b = state.hubs.find((hub) => hub.id === toId);
+  const a = state.hubsById.get(fromId) || state.hubs.find((hub) => hub.id === fromId);
+  const b = state.hubsById.get(toId) || state.hubs.find((hub) => hub.id === toId);
   return straightPoints(a, b);
 }
 
@@ -478,10 +519,10 @@ function drawIncidentMarker(svg) {
   let label = "SỰ CỐ";
   if (state.incident.kind === "breakdown") {
     const vehicle = state.vehiclesById[state.incident.vehicle_id];
-    const hub = vehicle && state.hubs.find((item) => item.id === vehicle.start_hub);
+    const hub = vehicle && (state.hubsById.get(vehicle.start_hub) || state.hubs.find((item) => item.id === vehicle.start_hub));
     if (hub) { point = project(hub.lat, hub.lon); label = "XE HỎNG"; }
   } else if (state.incident.kind === "depot_closed") {
-    const hub = state.hubs.find((item) => item.id === state.incident.hub_id);
+    const hub = state.hubsById.get(state.incident.hub_id) || state.hubs.find((item) => item.id === state.incident.hub_id);
     if (hub) { point = project(hub.lat, hub.lon); label = "KHO ĐÓNG"; }
   } else {
     const lat = state.hubs.reduce((sum, hub) => sum + hub.lat, 0) / state.hubs.length;
@@ -569,13 +610,13 @@ function showMapCard(event, stop, route) {
   card.style.top = `${top}px`;
   card.innerHTML = `
     <button class="mc-close" aria-label="Đóng" title="Đóng">×</button>
-    <h4>${order.shop || stop.code}</h4>
-    <p class="mc-meta">${stop.code} · ${route.plate}</p>
+    <h4>${esc(order.shop || stop.code)}</h4>
+    <p class="mc-meta">${esc(stop.code)} · ${esc(route.plate)}</p>
     <dl>
       <dt>Hạn giao</dt><dd class="mono">${clockLabel(8 * 60 + (order.promised_min || 0))}</dd>
       <dt>Tới nơi</dt><dd class="mono">${clockLabel(stop.arrive_min)} ${stop.late ? `<span class="tag-late">+${fmtKm(stop.late_min)}′</span>` : ""}</dd>
       <dt>Thu hộ</dt><dd class="mono">${order.cod ? `${viNum(order.cod)} đ` : "—"}</dd>
-      <dt>Hàng</dt><dd>${order.goods_label || ""} · ${fmt1(stop.weight_kg)} kg</dd>
+      <dt>Hàng</dt><dd>${esc(order.goods_label || "")} · ${fmt1(stop.weight_kg)} kg</dd>
     </dl>
     <div class="mc-actions">
       <button class="btn btn-ghost" id="mc-detail">Chi tiết</button>
@@ -656,13 +697,13 @@ function renderRoutes(routes) {
     card.dataset.vehicle = route.vehicle_id;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
-    card.setAttribute("aria-label", `Tuyến ${route.plate}, ${route.driver}, ${route.stops.length} điểm`);
+    card.setAttribute("aria-label", `Tuyến ${esc(route.plate)}, ${esc(route.driver)}, ${route.stops.length} điểm`);
     card.innerHTML = `
       <div class="route-top">
         <span class="route-dot" style="background:${color}"></span>
         <div>
-          <div class="route-driver">${route.driver}</div>
-          <div class="route-sub"><span class="route-plate">${route.plate}</span><span class="ic route-veh" style="--icon:url('/assets/icons/${vehicle.kind === "xe_may" ? "scooter" : "truck"}.svg')"></span>${vehicle.label}</div>
+          <div class="route-driver">${esc(route.driver)}</div>
+          <div class="route-sub"><span class="route-plate">${esc(route.plate)}</span><span class="ic route-veh" style="--icon:url('/assets/icons/${vehicle.kind === "xe_may" ? "scooter" : "truck"}.svg')"></span>${esc(vehicle.label)}</div>
         </div>
         <span class="route-meta">${route.stops.length} điểm · ${fmtKm(route.total_km)} km</span>
       </div>
@@ -705,7 +746,7 @@ function renderSteps(steps) {
     li.className = `stage-${step.stage}`;
     li.innerHTML = `
       <span class="step-stage">${stageLabel(step.stage)}</span>
-      <span class="step-body"><strong>${step.title}</strong> — <span>${step.detail}</span></span>
+      <span class="step-body"><strong>${esc(step.title)}</strong> — <span>${esc(step.detail)}</span></span>
       <span class="step-ms">+${step.ms ?? 0} ms</span>`;
     list.appendChild(li);
   }
@@ -751,11 +792,11 @@ function renderViolations(violations, initial) {
       const vehicle = state.vehiclesById[violation.vehicle_id];
       const driverLevel = violation.rule_id === "R06" || violation.rule_id === "R10";
       const who = driverLevel && vehicle
-        ? `${vehicle.plate} · ${vehicle.label}`
-        : order ? `${order.code} · ${order.shop}` : "";
+        ? `${esc(vehicle.plate)} · ${esc(vehicle.label)}`
+        : order ? `${esc(order.code)} · ${esc(order.shop)}` : "";
       return `<div class="violation" data-order="${violation.order_id}" data-vehicle="${violation.vehicle_id}" role="button" aria-label="Xem trên bản đồ">
-        <span class="v-id">${violation.rule_id}</span>
-        <span class="v-detail"><b>${violation.title}</b><br><span>${violation.detail}${who ? ` · ${who}` : ""}</span></span>
+        <span class="v-id">${esc(violation.rule_id)}</span>
+        <span class="v-detail"><b>${esc(violation.title)}</b><br><span>${esc(violation.detail)}${who ? ` · ${who}` : ""}</span></span>
         <span class="v-level ${violation.level}"><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span>${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
         <span class="v-pin" aria-hidden="true">↗</span>
       </div>`;
@@ -839,12 +880,16 @@ function openDrawer(kicker, title, html) {
   $("#drawer-kicker").textContent = kicker;
   $("#drawer-title").textContent = title;
   $("#drawer-body").innerHTML = html;
-  $("#drawer").hidden = false;
+  const drawer = $("#drawer");
+  drawer.hidden = false;
+  trapFocus(drawer);
 }
 
 function closeDrawer() {
-  $("#drawer").hidden = true;
-  $("#drawer").classList.remove("wide");
+  const drawer = $("#drawer");
+  releaseFocus(drawer);
+  drawer.hidden = true;
+  drawer.classList.remove("wide");
   setRailActive("dispatch");
 }
 
@@ -858,22 +903,22 @@ function openOrder(orderId, route, options = {}) {
   const rules = (state.plan?.violations || []).filter((violation) => violation.order_id === orderId);
 
   const kv = [
-    ["Mã đơn", order.code],
-    ["Cửa hàng", order.shop],
-    ["Địa chỉ", order.address],
-    ["Hàng hoá", `${order.goods_label} · ${fmt1(order.weight_kg)} kg · ${fmt1(order.volume_l)} L`],
+    ["Mã đơn", esc(order.code)],
+    ["Cửa hàng", esc(order.shop)],
+    ["Địa chỉ", esc(order.address)],
+    ["Hàng hoá", `${esc(order.goods_label)} · ${fmt1(order.weight_kg)} kg · ${fmt1(order.volume_l)} L`],
     ["Thu hộ", order.cod ? `${viNum(order.cod)} đ` : "Không thu hộ"],
-    ["Ưu tiên", `${order.priority_label} · hạn ${order.promised_min} phút`],
+    ["Ưu tiên", `${esc(order.priority_label)} · hạn ${order.promised_min} phút`],
     ["Hạn giao", clockLabel(due)],
   ];
   if (stop) kv.push(["Tới nơi", `${clockLabel(stop.arrive_min)} (${stop.late ? `trễ ${fmtKm(stop.late_min)} phút` : "đúng hạn"})`]);
-  if (vehicle) kv.push(["Tài xế", `${vehicle.driver} · ${route.plate} (${vehicle.label})`]);
+  if (vehicle) kv.push(["Tài xế", `${esc(vehicle.driver)} · ${esc(route.plate)} (${esc(vehicle.label)})`]);
   if (stop && route) kv.push(["Thứ tự", `điểm ${route.stops.indexOf(stop) + 1} / ${route.stops.length}`]);
 
   const rulesHtml = rules.length
     ? rules.map((violation) => `<div class="drawer-rule">
-         <b>${violation.rule_id} — ${violation.title}</b>
-         <span>${violation.detail}</span>
+         <b>${esc(violation.rule_id)} — ${esc(violation.title)}</b>
+         <span>${esc(violation.detail)}</span>
          <span class="v-level ${violation.level}"><span class="ic" style="--icon:url('/assets/icons/warning.svg')"></span>${violation.level === "chan" ? "chặn" : "cảnh báo"}</span>
         <span class="v-pin" aria-hidden="true">↗</span>
        </div>`).join("")
@@ -906,8 +951,8 @@ function openVehicle(vehicleId) {
   const lateMinutes = route.late_minutes ?? 0;
 
   const kv = [
-    ["Tài xế", vehicle.driver],
-    ["Loại xe", vehicle.label],
+    ["Tài xế", esc(vehicle.driver)],
+    ["Loại xe", esc(vehicle.label)],
     ["Tải", `${fmt1(route.load_kg)} / ${fmtKm(vehicle.capacity_kg)} kg`],
     ["Quãng đường", `${fmtKm(route.total_km)} km`],
     ["Thời gian chạy", `${fmtKm(route.total_min)} phút`],
@@ -922,7 +967,7 @@ function openVehicle(vehicleId) {
         : '<span class="t-ok" title="đúng hạn">✓</span>';
       return `<li>
         <time>${clockLabel(stop.arrive_min)}</time>
-        <span>${order ? `${order.shop}<em class="t-addr" title="${order.address}">${order.address}</em>` : stop.code}</span>
+        <span>${order ? `${esc(order.shop)}<em class="t-addr" title="${esc(order.address)}">${esc(order.address)}</em>` : esc(stop.code)}</span>
         ${tail}
       </li>`;
     })
@@ -967,7 +1012,7 @@ function orderRows() {
   const index = orderIndex();
   const rows = [];
   for (const order of Object.values(state.ordersById)) {
-    const hub = state.hubs.find((item) => item.id === order.dest_hub);
+    const hub = state.hubsById.get(order.dest_hub);
     const hit = index.get(order.id);
     rows.push({
       id: order.id,
@@ -995,7 +1040,7 @@ function openOrders() {
   $("#drawer-title").textContent = "Danh sách đơn";
 
   const districts = [...new Set(Object.values(state.ordersById).map(
-    (order) => state.hubs.find((hub) => hub.id === order.dest_hub)?.district).filter(Boolean))].sort();
+    (order) => state.hubsById.get(order.dest_hub)?.district).filter(Boolean))].sort();
 
   $("#drawer-body").innerHTML = `
     <div class="orders-head">
@@ -1040,10 +1085,10 @@ function openOrders() {
 
     $("#orders-body").innerHTML = rows.length ? rows.map((row) => `
       <tr data-order="${row.id}">
-        <td class="mono">${row.code}</td>
-        <td>${row.shop}</td>
-        <td>${row.district}</td>
-        <td>${row.goods}</td>
+        <td class="mono">${esc(row.code)}</td>
+        <td>${esc(row.shop)}</td>
+        <td>${esc(row.district)}</td>
+        <td>${esc(row.goods)}</td>
         <td class="num">${fmt1(row.weight)}</td>
         <td class="num">${clockLabel(row.due)}</td>
         <td class="num">${row.arrive == null ? "—" : clockLabel(row.arrive)}</td>
@@ -1165,7 +1210,7 @@ function printPlan() {
 function matchesSearch(order) {
   if (!state.search) return true;
   const needle = state.search.toLowerCase();
-  const hub = state.hubs.find((item) => item.id === order.dest_hub);
+  const hub = state.hubsById.get(order.dest_hub);
   return [order.code, order.shop, order.address, order.goods_label, order.priority_label,
     order.dest_hub, hub?.name ?? "", hub?.district ?? ""].join(" ").toLowerCase().includes(needle);
 }
@@ -1343,8 +1388,8 @@ async function openRules() {
             : level === "chan" ? "bad"
             : "same";
           return `<tr>
-            <td>${rule.id}</td>
-            <td><span class="rule-title">${rule.title}</span><span class="rule-clause">${rule.clause}</span></td>
+            <td>${esc(rule.id)}</td>
+            <td><span class="rule-title">${esc(rule.title)}</span><span class="rule-clause">${esc(rule.clause)}</span></td>
             <td class="num ${cls}">${num}</td>
           </tr>`;
         })
@@ -1362,6 +1407,7 @@ async function openRules() {
     việc đánh giá đơn đó và chuyển sang đơn kế tiếp. Cột phải là số lần luật kích hoạt ở vòng kiểm
     tra đầu và số còn lại sau khi tác tử sửa kế hoạch.</p>`;
   $("#modal").hidden = false;
+  trapFocus($("#modal"));
 }
 
 async function openCompare() {
@@ -1412,6 +1458,7 @@ async function openCompare() {
     <p class="cmp-title" style="margin-top:18px">Cách xếp thứ tự giao trong tuyến</p>${routingHtml}
     <p class="hint" style="margin-top:12px">Cùng một lô ${orders} đơn, seed ${seed}, cùng cách xếp tuyến. Dòng tô cam là chiến lược tốt nhất theo cột km / đúng giờ. Số ở đây tính trên thuật toán thuần, chưa qua bước tác tử sửa vi phạm nên có thể lệch nhẹ so với kế hoạch đang hiển thị.</p>`;
   $("#modal").hidden = false;
+  trapFocus($("#modal"));
 }
 
 function strategyLabel(key) {
@@ -1450,7 +1497,9 @@ function setRailActive(view) {
 }
 
 function closeModal() {
-  $("#modal").hidden = true;
+  const modal = $("#modal");
+  releaseFocus(modal);
+  modal.hidden = true;
   setRailActive("dispatch");
 }
 
@@ -1488,9 +1537,11 @@ async function loadEtaInfo() {
 }
 
 (async function boot() {
+  try {
   const hubs = await api("/api/hubs");
   state.hubs = hubs.hubs;
   state.bounds = hubs.bounds;
+  state.hubsById = new Map(hubs.hubs.map((h) => [h.id, h]));
   await loadScenario();
   drawBase();
   drawHubs();
@@ -1501,6 +1552,20 @@ async function loadEtaInfo() {
   $("#compare-btn").addEventListener("click", openCompare);
   $("#export-btn").addEventListener("click", exportCsv);
   $("#print-btn").addEventListener("click", printPlan);
+
+  /* Dark mode toggle */
+  const savedTheme = localStorage.getItem("dudu:theme");
+  if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+  $("#theme-btn").addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("dudu:theme", next);
+    // Redraw map to pick up new colors
+    if (state.plan) { drawBase(); drawHubs(); drawScale(); drawRoutes(); }
+    else if (state.hubs.length) { drawBase(); drawHubs(); drawScale(); }
+  });
+
   $("#config-btn").addEventListener("click", () => {
     const pop = $("#config-pop");
     pop.hidden = !pop.hidden;
@@ -1518,9 +1583,10 @@ async function loadEtaInfo() {
       renderViolations(state.violations || [], state.violationsInitial);
     });
   });
-  document.querySelectorAll(".tab").forEach((tab) => {
+  document.querySelectorAll(".tabs[role='tablist'] .tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((other) => {
+      const group = tab.closest(".tabs");
+      group.querySelectorAll(".tab").forEach((other) => {
         const active = other === tab;
         other.classList.toggle("is-active", active);
         other.setAttribute("aria-selected", String(active));
@@ -1566,14 +1632,26 @@ async function loadEtaInfo() {
   $("#mascot-photo").addEventListener("click", openIntro);
   $("#mascot-fold").addEventListener("click", () => setMascotFolded(true));
   $("#mascot-pill").addEventListener("click", () => setMascotFolded(false));
-  window.addEventListener("resize", syncMascotWidth);
-  window.addEventListener("resize", updateMarkerScale);
+  window.addEventListener("resize", debounce(syncMascotWidth, 100));
+  window.addEventListener("resize", debounce(updateMarkerScale, 100));
   syncMascotWidth();
   $("#brand-title").addEventListener("click", openIntro);
   $("#intro-close").addEventListener("click", () => closeIntro(true));
   $("#intro-start").addEventListener("click", () => closeIntro(true));
   $("#intro").addEventListener("click", (event) => { if (event.target.id === "intro") closeIntro(true); });
   if (!localStorage.getItem("dudu_intro_seen")) openIntro();
+
+  /* Mobile bottom nav */
+  document.querySelectorAll(".mob-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".mob-btn").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      if (btn.dataset.view === "rules") openRules();
+      if (btn.dataset.view === "orders") openOrders();
+      if (btn.dataset.view === "compare") openCompare();
+      if (btn.dataset.view === "dispatch") { closeModal(); closeDrawer(); }
+    });
+  });
 
   $("#drawer-close").addEventListener("click", closeDrawer);
   $("#modal-close").addEventListener("click", closeModal);
@@ -1594,34 +1672,13 @@ async function loadEtaInfo() {
     else if (event.key === "+" || event.key === "=") zoomAt(0.8);
     else if (event.key === "-") zoomAt(1.25);
   });
+  } catch (err) {
+    console.error("Boot failed:", err);
+    document.body.innerHTML = `<div class="boot-error">
+      <h2>Không kết nối được máy chủ</h2>
+      <p>DuDu cần API backend để hoạt động. Hãy chắc chắn rằng server đang chạy và thử tải lại trang.</p>
+      <p style="font-family:var(--mono);font-size:12px;color:var(--ink-3)">${esc(err.message)}</p>
+      <button class="btn btn-primary" onclick="location.reload()">Tải lại trang</button>
+    </div>`;
+  }
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
