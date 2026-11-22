@@ -86,3 +86,10 @@ thực và biết đánh đổi hơn**.
 3. Đặc trưng thời tiết chưa có trong dữ liệu thật (chỉ có ở bản sinh dự phòng).
 4. Tập test temporal chỉ 7 ngày cuối tháng — đủ để so sánh mô hình nhưng chưa đủ để kết luận
    về mùa vụ.
+
+## Đánh giá nâng cao
+
+Xem `docs/ket-qua-eta-nang-cao.md` (sinh bằng `python ml/advanced_eval.py --report`):
+tuning hyperparameter bằng rolling-origin CV, khoảng tin cậy thực nghiệm 80% và ablation
+đặc trưng. Kết quả chính: cấu hình HGB mặc định đã gần tối ưu theo CV; khoảng 80% đạt độ phủ
+82,0% (baseline ±15% chỉ 40,0%); bỏ nhóm đặc trưng giờ làm MAE tăng lên 3,806 phút.

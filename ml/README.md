@@ -81,3 +81,13 @@ nạp sẵn mô hình ở luồng nền lúc khởi động (`lifespan`) nên re
 3. Chưa có đặc trưng thời tiết thật trong dữ liệu; `is_rain` chỉ có ở bản dự phòng.
 
 
+
+## Đánh giá nâng cao
+
+```powershell
+python ml/advanced_eval.py --report   # -> docs/ket-qua-eta-nang-cao.md
+```
+
+Ba phần: tuning HistGradientBoosting bằng rolling-origin CV, khoảng tin cậy thực nghiệm 80%
+(học phân vị phần dư theo nhóm dự đoán), và ablation từng nhóm đặc trưng. Script chỉ ghi báo
+cáo, không ghi đè mô hình hay `eta_metrics.json` đang dùng cho demo.

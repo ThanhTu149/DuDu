@@ -100,3 +100,89 @@ Lỗi không lường trước được bọc trong một handler chung: trả `
   đơn lệch trong bán kính ~1 km để bản đồ không chồng điểm, còn định tuyến dùng nút.
 
 
+
+## Sơ đồ
+
+Bốn sơ đồ dưới đây dùng cú pháp Mermaid (GitHub render trực tiếp).
+
+### 1. Kiến trúc tổng thể
+
+```mermaid
+flowchart LR
+    UI["Trình duyệt<br/>HTML/CSS/JS thuần"] -->|"HTTP JSON"| API["FastAPI backend.app"]
+    API --> CACHE["LRU cache kịch bản<br/>+ lock ETA"]
+    API --> AGENT["DispatcherAgent<br/>perceive/decide/act/verify"]
+    AGENT --> ASSIGN["assignment.py<br/>Hungarian / greedy / savings"]
+    AGENT --> ROUTE["routing.py<br/>NN, 2-opt, Clarke–Wright"]
+    AGENT --> RULES["rules.py<br/>R01–R12 suy diễn tiến"]
+    AGENT --> NET["network.py<br/>ma trận OSRM + A* + RoutingView"]
+    ROUTE --> ETA["ml/eta_model.py<br/>hệ số ùn tắc theo giờ"]
+    NET --> DATA["data/processed<br/>matrix.json, geometry.json"]
+    API --> GEO["OSRM API<br/>chỉ khi cần làm mới geometry"]
+    ETA -.->|"tuỳ chọn"| MODEL["ml/models/eta_rf.joblib"]
+```
+
+### 2. Vòng đời tác tử một kế hoạch
+
+```mermaid
+sequenceDiagram
+    participant UI as Giao diện
+    participant API as FastAPI
+    participant A as DispatcherAgent
+    participant R as RuleEngine
+
+    UI->>API: POST /api/plan {seed, orders, vehicles, assignment, routing, eta}
+    API->>A: khởi tạo với kịch bản (seed cố định)
+    A->>A: perceive — nhận lô đơn, tổng khối lượng
+    A->>A: decide — chia đơn (Hungarian), sửa lô vượt tải
+    A->>A: act — xếp tuyến từng xe (Nearest Neighbor + 2-opt)
+    A->>R: verify — check_routes() chạy R01–R12
+    alt còn vi phạm mức chặn
+        R-->>A: danh sách vi phạm + hành động
+        A->>A: chuyển đơn sang xe còn chỗ, lập tuyến lại (tối đa 4 vòng)
+        A->>R: verify lại
+    end
+    A-->>API: routes, metrics, violations, steps
+    API-->>UI: JSON + warnings
+```
+
+### 3. Luồng dữ liệu của một lần lập kế hoạch
+
+```mermaid
+flowchart TD
+    S["seed + số đơn + số xe"] --> SC["scenario.py<br/>sinh đơn & xe tái lập được"]
+    SC --> AS["assignment.py<br/>phân công đơn cho xe"]
+    AS --> RT["routing.py<br/>thứ tự giao + ETA từng điểm"]
+    RT --> RV["rules.py<br/>đối chiếu 12 luật"]
+    RV --> M["metrics: km, phút, trễ, vi phạm"]
+    RV --> FIX{"vi phạm mức chặn?"}
+    FIX -->|có| AS
+    FIX -->|không| OUT["response JSON"]
+    OUT --> KPI["KPI Bento + bản đồ SVG"]
+    OUT --> GANTT["Dòng thời gian Gantt"]
+    OUT --> LOG["Nhật ký từng bước (steps)"]
+    OUT --> RULEUI["Bảng đối chiếu luật"]
+```
+
+### 4. Xử lý sự cố (kẹt xe) với A* tìm đường vòng
+
+```mermaid
+sequenceDiagram
+    participant UI as Giao diện
+    participant API as FastAPI
+    participant A as DispatcherAgent
+    participant V as RoutingView
+    participant N as Network (A*)
+
+    UI->>API: POST /api/incident {kind: congestion}
+    API->>A: handle_incident("congestion")
+    A->>A: time_multiplier = 1.4
+    A->>A: xác định vùng ùn tắc (bán kính 4,5 km)
+    A->>V: bọc mạng đường, đánh dấu chặng bị chặn
+    A->>A: chia lại toàn bộ đơn theo năng lực còn lại
+    V->>N: A* tìm đường vòng cho chặng bị chặn
+    N-->>V: đường đi + chi phí thật
+    V-->>A: tuyến đã tránh vùng ùn tắc, tổng km đi vòng
+    A-->>API: kế hoạch sau sự cố + giải trình "A* tìm đường vòng ..."
+    API-->>UI: JSON (metrics, routes, steps)
+```

@@ -1,0 +1,12 @@
+.git
+.github
+.cache
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+ml/models
+data/raw
+docs/hinh
+node_modules
+*.log

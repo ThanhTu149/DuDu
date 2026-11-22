@@ -57,6 +57,17 @@ python -m venv .venv
 Máy đã có sẵn Python đủ thư viện (không muốn tạo venv) thì bỏ qua bước 1 và thay
 `.venv\Scripts\python.exe` bằng `python`.
 
+### Docker (tuỳ chọn)
+
+```powershell
+docker build -t dudu .
+docker run --rm -p 8000:8000 dudu
+# mở http://127.0.0.1:8000
+```
+
+Ảnh Docker dựa trên `python:3.11-slim`, có `HEALTHCHECK` gọi `/api/health`. Mô hình ETA và
+dữ liệu thô không nằm trong ảnh — thiếu mô hình thì web vẫn chạy bằng OSRM free-flow.
+
 ### Mô hình ETA (tuỳ chọn)
 
 Tệp `ml/models/eta_rf.joblib` (~105 MB) **không commit** vì nặng. Nếu thiếu, web vẫn chạy
@@ -92,6 +103,7 @@ Hai script dưới đây sinh báo cáo trong `docs/`, seed cố định nên ch
 ```powershell
 python -m backend.dispatch.optimal --report     # -> docs/ket-qua-toi-uu.md
 python -m backend.dispatch.robustness --report  # -> docs/ket-qua-do-ben.md
+python ml/advanced_eval.py --report             # -> docs/ket-qua-eta-nang-cao.md
 ```
 
 - **Optimality gap xếp tuyến** (`docs/ket-qua-toi-uu.md`): so 6 chiến lược sắp thứ tự giao
@@ -102,6 +114,12 @@ python -m backend.dispatch.robustness --report  # -> docs/ket-qua-do-ben.md
   chiến lược `deadline` thêm 9,7% km nhưng kéo đơn trễ từ 2,23 xuống 0,27.
 - **Độ nhạy tham số**: `max_rounds` hội tụ sau 4 vòng; bán kính vùng ùn tắc 2→8 km làm A*
   phải đi vòng 3,5→227,4 km, là căn cứ chọn mặc định 4,5 km.
+- **ETA nâng cao** (`docs/ket-qua-eta-nang-cao.md`): tuning 7 cấu hình HGB bằng rolling-origin
+  CV (3 fold); khoảng tin cậy 80% học từ phân vị phần dư đạt độ phủ **82,0%** so với 40,0% của
+  baseline ±15%; bỏ nhóm đặc trưng giờ làm MAE tăng 3,489 → 3,806 phút.
+- **Cơ sở luật** (`docs/co-luat.md`): nguồn nghiệp vụ, ma trận xung đột ưu tiên và bảng đối
+  chiếu 21 ca kiểm thử cho R01–R12; `docs/ARCHITECTURE.md` có 4 sơ đồ Mermaid (kiến trúc, vòng
+  đời tác tử, luồng dữ liệu, xử lý sự cố bằng A*).
 
 ## Kiểm thử tự động
 
@@ -158,6 +176,10 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 | `docs/ket-qua-vrp.md` | Kết quả thí nghiệm xếp tuyến theo quy mô |
 | `docs/ket-qua-eta.md` | Kết quả mô hình dự đoán thời gian giao |
 | `docs/ket-qua-luat.md` | Thống kê kích hoạt 12 luật trên ba kịch bản |
+| `docs/co-luat.md` | Nguồn gốc 12 luật, ma trận xung đột ưu tiên, độ phủ kiểm thử |
+| `docs/ket-qua-toi-uu.md` | Optimality gap phần xếp tuyến (Held–Karp) |
+| `docs/ket-qua-do-ben.md` | 30 seed, so sánh chiến lược, độ nhạy tham số |
+| `docs/ket-qua-eta-nang-cao.md` | Tuning CV, khoảng tin cậy 80%, ablation đặc trưng ETA |
 | `docs/DATA.md` | Nguồn dữ liệu, giấy phép, cách tái tạo |
 | `docs/REVIEW.md` | Tự đánh giá điểm yếu và những gì đã khắc phục |
 | `docs/design-system/tailwind-snippets.md` | Snippet Tailwind (tương đương Dev Mode của Figma) |
@@ -165,6 +187,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

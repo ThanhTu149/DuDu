@@ -21,12 +21,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Kiểm thử lõi (không cần mô hình ETA)
-        run: python -m unittest discover -s tests -v
+      - name: Kiểm thử lõi + đo độ phủ (không cần mô hình ETA)
+        run: |
+          coverage run --source=backend,ml -m unittest discover -s tests -v
+          coverage report -m
 
       - name: Kiểm tra cú pháp JavaScript
         run: node --check web/assets/app.js
 
       - name: Kiểm tra API import được
         run: python -c "from backend.app import app; print(len(app.routes), 'routes')"
+
 
