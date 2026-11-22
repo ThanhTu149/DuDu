@@ -393,3 +393,31 @@ nhiều màu khác nhau mà không phải xuất thêm bản:
   đối chiếu tự động).
 - Bổ sung `--route-1…--route-8`; `ROUTE_COLORS` trong JS giờ **đọc từ biến CSS** thay vì
   hard-code, nên sửa token là màu tuyến đổi theo.
+
+## 19. Bản v14 — rà soát bản nâng cấp frontend v2 (Antigravity) và sửa tồn đọng
+
+Bản nâng cấp v2 do công cụ khác thực hiện gồm: hàm `esc()` chống XSS, focus trap, `hubsById`
+Map, debounce resize, dark mode, bottom nav cho mobile, xử lý lỗi boot, meta/OG/font web.
+Hướng làm đúng, nhưng kiểm thử thực tế phát hiện 8 lỗi — đã sửa hết:
+
+| # | Vấn đề phát hiện | Cách sửa |
+|---|---|---|
+| 1 | **Dark mode dở dang**: nhiều nền trắng hard-code (`.tab`, `.btn-quiet`, `.route`, biển số, ô nhập, badge) → chữ sáng trên nền sáng, không đọc được | Thêm token bề mặt (`--surface`, `--surface-2/3`, `--warm-soft`, `--warn-soft`, `--neutral-soft`, `--plate-bg`, `--surface-active`), thay toàn bộ nền cứng bằng biến; bổ sung block `[data-theme="dark"]` |
+| 2 | **Dark theo hệ điều hành bị nửa vời**: không set `data-theme` nên `.rail` lấy `background: var(--ink)` = màu sáng, trong khi phần còn lại tối | Boot đặt `data-theme` = lựa chọn đã lưu, nếu chưa có thì theo `prefers-color-scheme`; mọi override dark đều chạy |
+| 3 | Lần bấm đầu ở máy đang dark không đổi gì (current = null → next = dark) | Sau khi boot luôn có attribute; nút đổi sang sáng ngay lần đầu |
+| 4 | Icon nút theme không đổi, không có trạng thái | Đổi mặt trời/mặt trăng theo theme, thêm `aria-pressed` và tooltip |
+| 5 | Lưới bản đồ hard-code `#e7e1d6` → nền tối vẫn có lưới kem chói | Đổi sang class `.grid-path` + `stroke: var(--line-soft)` |
+| 6 | **Favicon bị đổi ngược** từ avatar về SVG chữ "D" (trái yêu cầu trước đó) | Sinh `favicon.png` 64px + `favicon-180.png` từ avatar, cập nhật link |
+| 7 | `esc()` phủ chưa hết: còn innerHTML chèn dữ liệu API ở nhãn Gantt, phiếu in, cột tài xế bảng đơn | Bọc `esc()` cho toàn bộ chỗ còn lại |
+| 8 | Focus trap: đóng modal không trả focus, mở drawer rồi mở modal thì drawer nằm dưới, drawer Danh sách đơn không được trap | `trapFocus` tự lưu phần tử kích hoạt và trả lại khi đóng; mở overlay nào thì đóng overlay kia; thêm trap cho drawer rộng |
+| 9 | Font web (Be Vietnam Pro) rộng hơn font hệ thống → header “ĐỐI CHIẾU CƠ SỞ LUẬT” và các tab bị xuống dòng ở 1366 | Rút gọn pill còn “N vi phạm”, thêm `white-space: nowrap` cho tiêu đề/tab, giảm padding tab ≤1500px |
+
+Bổ sung kiểm thử: `tests/test_frontend_assets.py` — quét mọi tham chiếu `/assets/...` trong
+html/css/js và khẳng định tệp tồn tại (chống 404 khi demo), kiểm tra favicon/meta/mobile nav
+và sự hiện diện của token dark. Tổng bộ test: **49 ca**.
+
+Bằng chứng kiểm tra: Playwright ở 1366×768, 1920×1080, 390×844 — không 404, không lỗi JS,
+`scrollWidth` bằng viewport; theme tối/sáng đổi và nhớ sau reload; focus trả về đúng nút rail;
+không còn overlay chồng nhau.
+
+Ảnh: `giao-dien-dieu-phoi.png` (sáng), `giao-dien-toi.png` (tối), `giao-dien-di-dong.png` (390px).

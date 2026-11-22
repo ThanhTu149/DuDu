@@ -17,6 +17,7 @@ function esc(str) {
 
 /* Focus trap for modals/drawers (accessibility) */
 function trapFocus(container) {
+  if (!container._returnFocus) container._returnFocus = document.activeElement;
   const focusable = container.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
   );
@@ -290,7 +291,7 @@ function drawBase() {
 
   // lưới phủ toàn khung nhìn (không chỉ vùng 1000×640) để khi zoom/kéo không lộ nền trống
   const pattern = el("pattern", { id: "grid-pattern", width: "80", height: "80", patternUnits: "userSpaceOnUse" });
-  pattern.appendChild(el("path", { d: "M80 0H0V80", fill: "none", stroke: "#e7e1d6", "stroke-width": "1" }));
+  pattern.appendChild(el("path", { d: "M80 0H0V80", fill: "none", class: "grid-path", "stroke-width": "1" }));
   defs.appendChild(pattern);
   svg.appendChild(el("rect", {
     x: -4000, y: -3000, width: 11000, height: 9000, fill: "url(#grid-pattern)", "pointer-events": "none",
@@ -766,7 +767,7 @@ function renderViolations(violations, initial) {
   const blocked = (violations || []).filter((violation) => violation.level === "chan").length;
   const total = violations?.length ?? 0;
   if (meta) {
-    meta.textContent = total ? `${total} vi phạm · ${blocked} chặn · ${total - blocked} cảnh báo` : "0 vi phạm";
+    meta.textContent = total ? `${total} vi phạm` : "0 vi phạm";
     meta.title = initial == null ? "Vi phạm còn lại sau khi tác tử sửa"
       : `Vòng kiểm tra đầu có ${initial} vi phạm, sau khi sửa còn ${total}`;
   }
@@ -891,6 +892,9 @@ function closeDrawer() {
   drawer.hidden = true;
   drawer.classList.remove("wide");
   setRailActive("dispatch");
+  const back = drawer._returnFocus;
+  drawer._returnFocus = null;
+  if (back && document.contains(back)) back.focus?.();
 }
 
 function openOrder(orderId, route, options = {}) {
@@ -1063,6 +1067,10 @@ function openOrders() {
       </table>
     </div>`;
 
+  const ordersDrawer = $("#drawer");
+  releaseFocus(ordersDrawer);
+  trapFocus(ordersDrawer);
+
   const apply = () => {
     const query = $("#orders-q").value.trim().toLowerCase();
     const status = $("#orders-status").value;
@@ -1095,7 +1103,7 @@ function openOrders() {
         <td>${row.status === "trễ" ? '<span class="badge-late">trễ</span>'
           : row.status === "đúng" ? '<span class="badge-ok">đúng</span>'
           : '<span class="badge-none">chưa xếp</span>'}</td>
-        <td class="mono">${row.driver}</td>
+        <td class="mono">${esc(row.driver)}</td>
       </tr>`).join("") : `<tr><td colspan="9">
         <div class="drawer-empty">
           <img src="/assets/stickers/gau-nau.png" alt="Gấu Nâu" />
@@ -1164,7 +1172,7 @@ function renderGantt() {
     const y = top + index * rowHeight;
     const color = ROUTE_COLORS[state.plan.routes.indexOf(route) % ROUTE_COLORS.length];
     parts.push(`<rect class="g-row${route.vehicle_id === state.activeVehicle ? " is-active" : ""}" data-vehicle="${route.vehicle_id}" x="0" y="${y}" width="${width}" height="${rowHeight}" fill="transparent"/>`);
-    parts.push(`<text class="g-label" x="0" y="${y + 13}">${route.plate}</text>`);
+    parts.push(`<text class="g-label" x="0" y="${y + 13}">${esc(route.plate)}</text>`);
     parts.push(`<rect x="${left}" y="${y + 3}" width="${(width - left - 12).toFixed(1)}" height="16" fill="#f1ece1" rx="3" opacity="0.55"/>`);
     for (const stop of route.stops) {
       const from = x(stop.arrive_min);
@@ -1195,7 +1203,7 @@ function printPlan() {
           <td>${stop.late ? "trễ" : ""}</td><td></td></tr>`;
       }).join("");
       return `<div class="p-route">
-        <h2>${route.plate} — ${vehicle.driver} (${vehicle.label}) · ${route.stops.length} điểm · ${fmtKm(route.total_km)} km</h2>
+        <h2>${esc(route.plate)} — ${esc(vehicle.driver)} (${esc(vehicle.label)}) · ${route.stops.length} điểm · ${fmtKm(route.total_km)} km</h2>
         <table><thead><tr><th>TT</th><th>Mã đơn</th><th>Cửa hàng</th><th>Địa chỉ</th><th>Giờ tới</th><th>Trạng thái</th><th>Ký nhận</th></tr></thead>
         <tbody>${rows}</tbody></table></div>`;
     }).join("");
@@ -1501,6 +1509,9 @@ function closeModal() {
   releaseFocus(modal);
   modal.hidden = true;
   setRailActive("dispatch");
+  const back = modal._returnFocus;
+  modal._returnFocus = null;
+  if (back && document.contains(back)) back.focus?.();
 }
 
 function openIntro() {
@@ -1553,17 +1564,31 @@ async function loadEtaInfo() {
   $("#export-btn").addEventListener("click", exportCsv);
   $("#print-btn").addEventListener("click", printPlan);
 
-  /* Dark mode toggle */
+  /* Dark mode: áp ngay khi boot để khớp cả hệ điều hành lẫn lựa chọn đã lưu */
+  const THEME_ICONS = {
+    dark: '<path d="M12 4V2m0 20v-2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4m12.8-12.8 1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="4.2" fill="currentColor"/>',
+    light: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  };
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const savedTheme = localStorage.getItem("dudu:theme");
-  if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-  $("#theme-btn").addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("dudu:theme", next);
-    // Redraw map to pick up new colors
+  const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+  const applyTheme = (theme) => {
+    document.documentElement.setAttribute("data-theme", theme);
+    const icon = $("#theme-icon");
+    if (icon) icon.innerHTML = THEME_ICONS[theme] || THEME_ICONS.light;
+    const button = $("#theme-btn");
+    if (button) {
+      button.setAttribute("aria-pressed", String(theme === "dark"));
+      button.title = theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
+    }
     if (state.plan) { drawBase(); drawHubs(); drawScale(); drawRoutes(); }
     else if (state.hubs.length) { drawBase(); drawHubs(); drawScale(); }
+  };
+  applyTheme(initialTheme);
+  $("#theme-btn").addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    localStorage.setItem("dudu:theme", next);
+    applyTheme(next);
   });
 
   $("#config-btn").addEventListener("click", () => {
@@ -1608,9 +1633,9 @@ async function loadEtaInfo() {
     button.addEventListener("click", () => {
       document.querySelectorAll(".rail-btn").forEach((other) => other.classList.remove("is-active"));
       button.classList.add("is-active");
-      if (button.dataset.view === "rules") openRules();
-      if (button.dataset.view === "orders") openOrders();
-      if (button.dataset.view === "compare") openCompare();
+      if (button.dataset.view === "rules") { closeDrawer(); openRules(); }
+      if (button.dataset.view === "orders") { closeModal(); openOrders(); }
+      if (button.dataset.view === "compare") { closeDrawer(); openCompare(); }
       if (button.dataset.view === "intro") { openIntro(); setRailActive("dispatch"); }
       if (button.dataset.view === "dispatch") { closeModal(); closeDrawer(); }
     });
@@ -1646,9 +1671,9 @@ async function loadEtaInfo() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".mob-btn").forEach((b) => b.classList.remove("is-active"));
       btn.classList.add("is-active");
-      if (btn.dataset.view === "rules") openRules();
-      if (btn.dataset.view === "orders") openOrders();
-      if (btn.dataset.view === "compare") openCompare();
+      if (btn.dataset.view === "rules") { closeDrawer(); openRules(); }
+      if (btn.dataset.view === "orders") { closeModal(); openOrders(); }
+      if (btn.dataset.view === "compare") { closeDrawer(); openCompare(); }
       if (btn.dataset.view === "dispatch") { closeModal(); closeDrawer(); }
     });
   });
@@ -1682,3 +1707,7 @@ async function loadEtaInfo() {
     </div>`;
   }
 })();
+
+
+
+
