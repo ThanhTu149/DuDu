@@ -29,21 +29,52 @@ DuDu/
 └── docs/        kế hoạch, kiến trúc, thiết kế, báo cáo
 ```
 
-## Chạy thử
+## Chạy web
+
+### Cách 1 — bấm đúp `run.bat` (nhanh nhất)
+
+Mở thư mục repo bằng File Explorer → bấm đúp **`run.bat`**. Script tự tìm Python có đủ
+`fastapi`/`uvicorn` (theo thứ tự: biến `DUDU_PYTHON` → `.venv` → `python` trên PATH → bản
+Python của DeepSeek Harness nếu có), khởi động server và tự mở trình duyệt ở
+`http://127.0.0.1:8000`. Nếu cổng 8000 bận vì DuDu đang chạy sẵn, nó chỉ mở trình duyệt;
+nếu bận vì app khác, nó tự nhảy sang 8010/8020… Đóng cửa sổ đen là tắt server.
+
+Không cần làm gì thêm: `data/processed/matrix.json` (ma trận OSRM) và `geometry.json` đã
+commit sẵn nên web chạy được ngay, kể cả khi không có mạng.
+
+### Cách 2 — chạy tay bằng lệnh
 
 ```powershell
-# 1. Cài phụ thuộc
-pip install -r requirements.txt
+# 1. Cài phụ thuộc (một lần). Python 3.11+
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 
-# 2. Sinh ma trận khoảng cách (gọi OSRM, lưu cache vào data/processed/)
-python data/build_matrix.py
+# 2. Chạy server, rồi mở http://127.0.0.1:8000
+.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+```
 
-# 3. Huấn luyện mô hình ETA
+Máy đã có sẵn Python đủ thư viện (không muốn tạo venv) thì bỏ qua bước 1 và thay
+`.venv\Scripts\python.exe` bằng `python`.
+
+### Mô hình ETA (tuỳ chọn)
+
+Tệp `ml/models/eta_rf.joblib` (~105 MB) **không commit** vì nặng. Nếu thiếu, web vẫn chạy
+bình thường: nút "ETA mô hình" dùng OSRM free-flow và API trả `warnings`. Muốn bật mô hình
+thật:
+
+```powershell
+# tải parquet NYC TLC (~48 MB) vào data/raw/ rồi:
+python ml/build_dataset.py --force
 python ml/train_eta.py
+```
 
-# 4. Chạy server
-python -m uvicorn backend.app:app --reload --port 8000
-# mở http://127.0.0.1:8000
+### Chạy lại dữ liệu/kết quả (tuỳ chọn)
+
+```powershell
+python data/build_matrix.py            # gọi OSRM sinh lại ma trận (cần mạng)
+python -m backend.dispatch.evaluate --report   # sinh bảng kết quả VRP
+python -m unittest discover -s tests -v        # 74 ca kiểm thử
 ```
 
 ## Dữ liệu
@@ -116,6 +147,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 
