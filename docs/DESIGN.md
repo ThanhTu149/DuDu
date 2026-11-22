@@ -421,3 +421,59 @@ Bằng chứng kiểm tra: Playwright ở 1366×768, 1920×1080, 390×844 — kh
 không còn overlay chồng nhau.
 
 Ảnh: `giao-dien-dieu-phoi.png` (sáng), `giao-dien-toi.png` (tối), `giao-dien-di-dong.png` (390px).
+
+## 20. Bản v15 — bản đồ tràn viền, KPI Bento, Dark "Obsidian + Copper"
+
+Không đụng vào logic điều phối: Hungarian, NN + 2-opt, mô hình ETA, 12 luật và mô phỏng sự cố
+giữ nguyên; toàn bộ thay đổi nằm ở tầng trình bày.
+
+### 1. Ba lỗi hiển thị đã sửa
+
+| Lỗi | Cách sửa |
+|---|---|
+| Viền đen cứng quanh khung bản đồ | `.map-panel` bỏ `panel-head` ngoài, bo `16px`, viền mảnh `#E5DCCB` (light) / `#292524` (dark); `#map` và `.map-wrap` cùng nền token `--map-bg`, không còn đường kẻ lạ |
+| Icon bị nhân đôi ở legend | Xoá toàn bộ `<i class="swatch …">`, legend chỉ còn 4 icon SVG mask (`warehouse`, `package`, `route`, `warning`) có màu theo trạng thái |
+| Cắt chữ ở mép | `.steps { padding-top: 18px }` + dời đường timeline xuống 26px; `.kpi-note { padding-right: 10px }` |
+
+### 2. Bản đồ tràn viền + điều khiển nổi
+
+- `.map-panel` không còn header/legend chiếm chỗ: canvas chiếm 100% card, cao thêm ~55px.
+- Ba cụm nổi `backdrop-filter: blur(10px)`:
+  - góc trên-trái: pill tiêu đề + chấm "live";
+  - góc trên-phải: ô tìm kiếm + `CSV` + `In`;
+  - phải dưới tiêu đề: cụm zoom `+ / − / fit / ⛶`;
+  - đáy phải: pill legend chỉ còn icon.
+- Thẻ `Biệt đội DuDu` giữ nguyên ở đáy trái, nâng lên 56px để không chạm legend.
+
+### 3. KPI Bento, thẻ tài xế, Gantt
+
+- 4 thẻ Bento `rounded-2xl` (16px), icon pastel 32px, số `tabular-nums`; thẻ "Đúng giờ" có
+  **vòng tiến độ SVG 30px** (teal, chuyển vàng khi dưới 90%).
+- Thẻ tài xế bo 16px; thẻ đang chọn: nền `#FFF3E8` + viền cam + bóng (dark: `#2A1A12` + viền
+  `#E05A1E` + glow); thanh tải **6px** bo tròn, hiện `%`, đổi vàng ≥80% / đỏ ≥95%.
+- Gantt: khối đơn `rx: 8` dạng viên thuốc, giữ highlight hàng đang chọn.
+
+### 4. Dark mode "Obsidian + Copper Glow"
+
+| Hạng mục | Giá trị |
+|---|---|
+| Nền / card / phụ | `#0F0E0D` / `#1A1715` viền `#2B2623` / `#24201D` |
+| Chữ | chính `#F5F2EC`, phụ `#A8A29E` |
+| Nhấn | `#E05A1E`, nút chính có `box-shadow: 0 0 24px -8px rgba(224,90,30,.35)` |
+| Bản đồ | nền `#141618`, lưới `#23262A`, bao khu vực `#2F343A`, nhãn `#9CA3AF` + halo `#141618` |
+| Tuyến | 8 màu nâng độ sáng trong dark; JS đọc lại biến CSS khi đổi theme rồi vẽ lại bản đồ + Gantt |
+| Trạng thái | pill `chặn/trễ` đỏ trong mờ, `cảnh báo` hổ phách trong mờ, `đúng` xanh ngọc trong mờ |
+| Mascot | giữ khung ảnh kem, viền ngoài `#2B2623` để 4 nhân vật vẫn rực |
+
+Chuyển theme chuyển cảnh `0.2s`; trạng thái lưu `localStorage["dudu:theme"]`.
+
+### 5. Kiểm tra
+
+| Kịch bản | 1366×768 | 1920×1080 |
+|---|---|---|
+| Light — plan, 3 sự cố, drawer, modal | không tràn, 0 lỗi JS, 0 request 4xx | như bên |
+| Dark — plan, 3 sự cố, drawer, modal | như trên | như trên |
+| 390×844 mobile | KPI 2×2, toolbar chỉ icon, legend xuống 2 dòng, không tràn (`scrollWidth = 390`) | — |
+
+Thêm 11 token màu cho dark/map vào `docs/design-system/tokens.json` để Figma cũng có.
+Ảnh: `giao-dien-dieu-phoi.png`, `giao-dien-toi.png`, `giao-dien-di-dong.png`.

@@ -45,14 +45,17 @@ const H = 640;
 const PAD = 56;
 
 const ROUTE_FALLBACK = ["#c9490e", "#2c6b52", "#2f5d8c", "#8a6100", "#6b3f8c", "#a3402d", "#2f7c7c", "#5c6b2f"];
-// Màu tuyến đọc từ biến CSS (nguồn duy nhất: docs/design-system/tokens.json → :root)
-const ROUTE_COLORS = (() => {
+// Màu tuyến đọc từ biến CSS (nguồn duy nhất: tokens.json → :root → [data-theme="dark"]).
+// Đổi theme thì đọc lại rồi vẽ lại, nên tuyến tự sáng lên trên nền tối.
+let ROUTE_COLORS = readRouteColors();
+
+function readRouteColors() {
   const styles = getComputedStyle(document.documentElement);
   return ROUTE_FALLBACK.map((fallback, index) => {
     const value = styles.getPropertyValue(`--route-${index + 1}`).trim();
     return value || fallback;
   });
-})();
+}
 
 const state = {
   hubs: [],
@@ -662,7 +665,16 @@ function renderKpis(metrics) {
   $("#kpi-km").innerHTML = `${fmtKm(metrics.total_km)} <small>km</small>`;
   $("#kpi-ontime").innerHTML = `${fmt1(metrics.on_time_rate)}<small>%</small>`;
   $("#kpi-late").innerHTML = `${metrics.late_count} <small>/ ${metrics.orders}</small>`;
-  $("#kpi-violations").innerHTML = `${blocked} <small>chặn</small> · ${total - blocked} <small>cảnh báo</small>`;
+  $("#kpi-violations").innerHTML = `${blocked} <small>chặn</small><span class="kpi-extra"> · ${total - blocked} <small>cảnh báo</small></span>`;
+  // vòng tiến độ 30px cho thẻ "Đúng giờ"
+  const ring = $("#kpi-ring");
+  if (ring) {
+    const circumference = 2 * Math.PI * 13;
+    const rate = Math.max(0, Math.min(100, Number(metrics.on_time_rate) || 0));
+    ring.style.strokeDasharray = `${circumference.toFixed(1)}`;
+    ring.style.strokeDashoffset = `${(circumference * (1 - rate / 100)).toFixed(1)}`;
+    ring.classList.toggle("is-low", rate < 90);
+  }
   const note = $("#kpi-note");
   if (note) {
     note.textContent = `${metrics.vehicles_used} xe · ${metrics.orders} điểm giao · ${fmt1(metrics.total_min)} phút xe chạy`;
@@ -708,7 +720,10 @@ function renderRoutes(routes) {
         </div>
         <span class="route-meta">${route.stops.length} điểm · ${fmtKm(route.total_km)} km</span>
       </div>
-      <div class="route-bar"><i style="width:${loadPct}%;background:${route.over_capacity ? "var(--alert)" : color}"></i></div>
+      <div class="route-bar">
+        <div class="route-bar-track"><i class="${route.over_capacity || loadPct >= 95 ? "is-over" : loadPct >= 80 ? "is-high" : ""}" style="width:${Math.max(2, loadPct)}%;${route.over_capacity || loadPct >= 80 ? "" : `background:${color}`}"></i></div>
+        <span class="route-load-pct">${Math.round(loadPct)}%</span>
+      </div>
       <div class="route-foot">
         <span><b>${fmt1(route.load_kg)}/${fmtKm(vehicle.capacity_kg)}</b> kg</span>
         <span>xong <b>${clockLabel(lastArrival(route))}</b></span>
@@ -1581,8 +1596,18 @@ async function loadEtaInfo() {
       button.setAttribute("aria-pressed", String(theme === "dark"));
       button.title = theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
     }
-    if (state.plan) { drawBase(); drawHubs(); drawScale(); drawRoutes(); }
-    else if (state.hubs.length) { drawBase(); drawHubs(); drawScale(); }
+    ROUTE_COLORS = readRouteColors();
+    if (state.plan) {
+      drawBase();
+      drawHubs();
+      drawScale();
+      drawRoutes();
+      if (typeof renderGantt === "function") renderGantt();
+    } else if (state.hubs.length) {
+      drawBase();
+      drawHubs();
+      drawScale();
+    }
   };
   applyTheme(initialTheme);
   $("#theme-btn").addEventListener("click", () => {
@@ -1707,6 +1732,9 @@ async function loadEtaInfo() {
     </div>`;
   }
 })();
+
+
+
 
 
 
