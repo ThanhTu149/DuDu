@@ -112,6 +112,7 @@ function applyView() {
   const note = $("#map-note");
   if (note) note.textContent = `zoom ${((state.fitW || v.w) / v.w).toFixed(1)}×`;
   updateMarkerScale();
+  updateHubGlyphs();
 }
 
 function fitView() {
@@ -408,22 +409,69 @@ function drawBase() {
   }
 }
 
+// Icon 24×24 (stroke) dùng lại đúng tệp web/assets/icons/: warehouse & package
+const HUB_GLYPHS = {
+  depot: [
+    "M3 21V9l9-5 9 5v12",
+    "M7 21v-7h10v7",
+    "M7 17h10",
+  ],
+  hub: [
+    "M12 3 3 7.5v9L12 21l9-4.5v-9z",
+    "m3 7.5 9 4.5 9-4.5M12 12v9",
+    "m7.5 5.3 9 4.5",
+  ],
+};
+
 function drawHubs() {
   const svg = $("#map");
+  document.querySelector("#hub-layer")?.remove();
   const layer = el("g", { id: "hub-layer" });
+  state.hubGlyphs = [];
   for (const hub of state.hubs) {
     const [x, y] = project(hub.lat, hub.lon);
     const isDepot = hub.kind === "depot" || hub.kind === "port" || hub.kind === "market";
+    const size = isDepot ? 18 : 16;
+    const glyph = el("g", { class: `hub-glyph ${isDepot ? "hub-glyph--depot" : "hub-glyph--hub"}` });
+
+    // Huy hiệu vẽ theo "đơn vị pixel" rồi scale ngược theo zoom → luôn đúng 18/16px trên màn hình
     if (isDepot) {
-      layer.appendChild(el("rect", { x: x - 4, y: y - 4, width: 8, height: 8, rx: 1.5, fill: "#15171c", opacity: 0.85 }));
+      glyph.appendChild(el("rect", {
+        x: -size / 2, y: -size / 2, width: size, height: size, rx: 5, class: "hub-badge",
+      }));
     } else {
-      layer.appendChild(el("circle", { cx: x, cy: y, r: 4.5, fill: "#fff", stroke: "#858b94", "stroke-width": 1.4 }));
+      glyph.appendChild(el("circle", { cx: 0, cy: 0, r: size / 2, class: "hub-badge" }));
     }
-    const label = el("text", { x: x + 8, y: y + 3.5, class: "hub-label" });
+    const iconSize = isDepot ? 11 : 10;
+    const icon = el("g", {
+      class: "hub-ico",
+      transform: `translate(${-iconSize / 2} ${-iconSize / 2}) scale(${(iconSize / 24).toFixed(4)})`,
+    });
+    for (const d of HUB_GLYPHS[isDepot ? "depot" : "hub"]) {
+      icon.appendChild(el("path", { d, class: "hub-ico-path" }));
+    }
+    glyph.appendChild(icon);
+
+    const label = el("text", { x: size / 2 + 5, y: 3.5, class: "hub-label" });
     label.textContent = hub.name;
-    layer.appendChild(label);
+    glyph.appendChild(label);
+
+    layer.appendChild(glyph);
+    state.hubGlyphs.push({ group: glyph, x, y });
   }
   svg.appendChild(layer);
+  updateHubGlyphs();
+}
+
+function updateHubGlyphs() {
+  if (!state.hubGlyphs?.length) return;
+  const rect = $("#map").getBoundingClientRect();
+  const viewW = state.view ? state.view.w : W;
+  const pxPerWorld = Math.max(rect.width / Math.max(viewW, 1), 0.0001);
+  const scale = 1 / pxPerWorld;
+  for (const { group, x, y } of state.hubGlyphs) {
+    group.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(3)})`);
+  }
 }
 
 function drawScale() {
@@ -541,9 +589,8 @@ function drawRoutes() {
       const dot = el("circle", {
         cx: x, cy: y, r: stop.late ? 4.2 : 2.9,
         fill: color,
-        stroke: stop.late ? "#b3261e" : "#fff",
-        "stroke-width": stop.late ? 1.6 : 1.1,
-        class: "stop-dot", "data-order": stop.order_id, "data-vehicle": route.vehicle_id,
+        class: `stop-dot${stop.late ? " is-late" : ""}`,
+        "data-order": stop.order_id, "data-vehicle": route.vehicle_id,
       });
       dot.style.pointerEvents = "none";
       const hit = el("circle", {
@@ -1343,9 +1390,9 @@ function paintPlan(plan) {
   state.activeVehicle = null;
   state.geometryDone = false;
   drawBase();
-  drawHubs();
   drawScale();
   drawRoutes();
+  drawHubs();
   renderKpis(plan.metrics);
   renderRoutes(plan.routes);
   renderSteps(plan.steps);
@@ -1413,9 +1460,9 @@ async function simulateIncident(kind) {
     state.plan = result;
     state.geometryDone = false;
     drawBase();
-    drawHubs();
     drawScale();
     drawRoutes();
+    drawHubs();
     renderKpis(result.metrics);
     renderRoutes(result.routes);
     renderSteps(result.steps);
@@ -1647,8 +1694,8 @@ async function loadEtaInfo() {
   state.hubsById = new Map(hubs.hubs.map((h) => [h.id, h]));
   await loadScenario();
   drawBase();
-  drawHubs();
   drawScale();
+  drawHubs();
   await loadEtaInfo();
 
   $("#plan-btn").addEventListener("click", runPlan);
@@ -1676,14 +1723,14 @@ async function loadEtaInfo() {
     ROUTE_COLORS = readRouteColors();
     if (state.plan) {
       drawBase();
-      drawHubs();
       drawScale();
       drawRoutes();
+      drawHubs();
       if (typeof renderGantt === "function") renderGantt();
     } else if (state.hubs.length) {
       drawBase();
-      drawHubs();
       drawScale();
+      drawHubs();
     }
   };
   applyTheme(initialTheme);
@@ -1761,6 +1808,7 @@ async function loadEtaInfo() {
   $("#mascot-pill").addEventListener("click", () => setMascotFolded(false));
   window.addEventListener("resize", debounce(syncMascotWidth, 100));
   window.addEventListener("resize", debounce(updateMarkerScale, 100));
+  window.addEventListener("resize", debounce(updateHubGlyphs, 100));
   syncMascotWidth();
   $("#brand-title").addEventListener("click", openIntro);
   $("#intro-close").addEventListener("click", () => closeIntro(true));
@@ -1809,6 +1857,9 @@ async function loadEtaInfo() {
     </div>`;
   }
 })();
+
+
+
 
 
 

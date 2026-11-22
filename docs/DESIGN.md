@@ -491,3 +491,30 @@ Thêm 11 token màu cho dark/map vào `docs/design-system/tokens.json` để Fig
 Kiểm chứng bằng computed style ở 1366×768: light `track rgb(239,234,224) / stroke rgb(250,248,244) / late rgb(179,38,30)`;
 dark `track rgb(36,33,30) / stroke rgb(36,33,30) / late rgb(239,68,68) + drop-shadow / label rgb(214,211,209) / grid rgba(255,255,255,0.08) dash 4px,6px`.
 Logo: `complete=true`, cao 28px, hover `matrix(1.05…)`, click mở modal OK; 0 request 404, 0 lỗi JS.
+
+## 22. Bản v17 — đồng bộ ký hiệu bản đồ ↔ chú thích
+
+| Ký hiệu | Trên bản đồ | Trên chú thích |
+|---|---|---|
+| Kho / cảng | Huy hiệu vuông bo 5px **18×18px**, icon `warehouse` trắng, viền ngoài 1.5px (light: nền `#1C1917`, viền `#FAF8F4`; dark: nền `#F5F2EC`, viền `#E05A1E`, icon `#1C1917`) | Cùng huy hiệu `lg-badge--depot` 18px, cùng icon/viền/màu |
+| Bưu cục | Huy hiệu tròn **16×16px**, icon `package`, viền 1.25px (light: nền `#FAF8F4`, viền `#57534E`, icon `#44403C`; dark: nền `#24201D`, viền `#A8A29E`, icon `#E7E5E4`) | Cùng huy hiệu `lg-badge--hub` 16px |
+| Điểm giao | Chấm tròn màu tuyến, viền mỏng `var(--stop-dot-ring)` (light trắng, dark `#141618`) | Chấm 8px màu `--accent`, cùng viền |
+| Trễ hẹn | Chấm đỏ viền `var(--alert)` + vòng pulse | Chấm 8px đỏ + vòng ring ngoài 1.5px |
+
+Cơ chế giữ tỉ lệ: huy hiệu được vẽ theo **đơn vị pixel**, mỗi lần `applyView()` gán
+`transform: translate(x,y) scale(1/pxPerWorld)` cho từng nút → kích thước luôn cố định trên
+màn hình. Nhãn tên nằm trong cùng nhóm (dịch sang phải 4–5px, so le lên/xuống, halo 2.5px),
+nên không bao giờ đè lên viền huy hiệu.
+
+Kiểm chứng tự động (Playwright, cả 3 kích thước × 2 theme):
+
+| Đo | Fit | Zoom 6.0× |
+|---|---|---|
+| Huy hiệu kho | **18px** | **18px** |
+| Huy hiệu bưu cục | **16px** | **16px** |
+| Chiều cao nhãn | 11px | 11px |
+| Chấm trễ trên bản đồ | 1 | 1 |
+| Chú thích | 2 badge + 2 dot | 2 badge + 2 dot |
+
+Không tràn ngang (1366/1920/390), 0 request 404, 0 lỗi JS. Ảnh: `giao-dien-dieu-phoi.png`,
+`giao-dien-toi.png`, `giao-dien-zoom.png` (chụp ở zoom 6×).

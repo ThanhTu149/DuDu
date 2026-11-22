@@ -79,6 +79,18 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn('[data-theme="dark"]', css)
         self.assertIn("--surface:", css.split('[data-theme="dark"]', 1)[1])
 
+    def test_map_legend_matches_symbols(self) -> None:
+        # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
+        html = (WEB / "index.html").read_text(encoding="utf-8")
+        self.assertIn("lg-badge--depot", html)
+        self.assertIn("lg-badge--hub", html)
+        self.assertIn("lg-dot--route", html)
+        self.assertIn("lg-dot--late", html)
+        self.assertNotIn("swatch sw-depot", html)
+        js = (WEB / "assets" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("updateHubGlyphs", js)
+        self.assertIn("HUB_GLYPHS", js)
+
     def test_mobile_nav_present(self) -> None:
         html = (WEB / "index.html").read_text(encoding="utf-8")
         self.assertIn('class="mobile-nav"', html)
@@ -87,4 +99,5 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

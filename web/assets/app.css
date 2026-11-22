@@ -1735,3 +1735,84 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
   stroke: rgba(255, 255, 255, .08); stroke-dasharray: 4 6;
 }
 [data-theme="dark"] .gantt .g-row.is-active { fill: rgba(224, 90, 30, .14); }
+
+/* ============ v17: đồng bộ ký hiệu bản đồ ↔ chú thích ============ */
+
+:root {
+  --hub-depot-bg: #1C1917;
+  --hub-depot-ring: #FAF8F4;
+  --hub-depot-ico: #FAF8F4;
+  --hub-hub-bg: #FAF8F4;
+  --hub-hub-ring: #57534E;
+  --hub-hub-ico: #44403C;
+  --stop-dot-ring: #ffffff;
+}
+[data-theme="dark"] {
+  --hub-depot-bg: #F5F2EC;
+  --hub-depot-ring: #E05A1E;
+  --hub-depot-ico: #1C1917;
+  --hub-hub-bg: #24201D;
+  --hub-hub-ring: #A8A29E;
+  --hub-hub-ico: #E7E5E4;
+  --stop-dot-ring: #141618;
+}
+
+/* huy hiệu nút trên bản đồ (vẽ theo pixel rồi scale ngược) */
+.hub-badge { stroke-linejoin: round; }
+.hub-glyph--depot .hub-badge {
+  fill: var(--hub-depot-bg);
+  stroke: var(--hub-depot-ring);
+  stroke-width: 1.5;
+}
+.hub-glyph--hub .hub-badge {
+  fill: var(--hub-hub-bg);
+  stroke: var(--hub-hub-ring);
+  stroke-width: 1.25;
+}
+.hub-ico-path {
+  fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+.hub-glyph--depot .hub-ico-path { stroke: var(--hub-depot-ico); }
+.hub-glyph--hub .hub-ico-path { stroke: var(--hub-hub-ico); }
+.hub-glyph .hub-label {
+  font-size: 10px;
+  stroke-width: 2.5px;
+  paint-order: stroke;
+}
+.hub-glyph { cursor: default; }
+
+/* chấm điểm giao: viền sáng ở light, viền tối ở dark */
+.stop-dot { stroke: var(--stop-dot-ring); stroke-width: 1.1; }
+.stop-dot.is-late { stroke: var(--alert); stroke-width: 1.6; }
+
+/* huy hiệu + chấm trên thanh chú thích, khớp 1:1 với bản đồ */
+.map-legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+.lg-badge {
+  width: 18px; height: 18px; border-radius: 5px; flex: none;
+  display: inline-grid; place-items: center;
+}
+.lg-badge svg { width: 11px; height: 11px; display: block; }
+.lg-badge--depot {
+  background: var(--hub-depot-bg); color: var(--hub-depot-ico);
+  box-shadow: inset 0 0 0 1.5px var(--hub-depot-ring);
+}
+.lg-badge--hub {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--hub-hub-bg); color: var(--hub-hub-ico);
+  box-shadow: inset 0 0 0 1.25px var(--hub-hub-ring);
+}
+.lg-badge--hub svg { width: 10px; height: 10px; }
+.lg-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lg-dot--route {
+  background: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--stop-dot-ring);
+}
+.lg-dot--late {
+  position: relative; background: var(--alert);
+  box-shadow: 0 0 0 1.5px var(--stop-dot-ring);
+}
+.lg-dot--late::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1.5px solid var(--alert); opacity: .55;
+}
+.hub-glyph .hub-label { font-size: 9px; stroke-width: 2.5px; }
