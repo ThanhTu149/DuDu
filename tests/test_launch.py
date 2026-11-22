@@ -31,6 +31,17 @@ class TestLauncher(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("run.bat", readme)
 
+    def test_docker_files_present(self) -> None:
+        self.assertTrue((ROOT / "Dockerfile").exists())
+        compose = ROOT / "docker-compose.yml"
+        self.assertTrue(compose.exists())
+        text = compose.read_text(encoding="utf-8")
+        self.assertIn("8000:8000", text)
+        self.assertIn("dudu", text)
+        launcher = ROOT / "chay-bang-docker.bat"
+        self.assertTrue(launcher.exists())
+        self.assertIn("docker compose up", launcher.read_text(encoding="utf-8", errors="ignore"))
+
     def test_required_runtime_files_exist(self) -> None:
         self.assertTrue((ROOT / "requirements.txt").exists())
         self.assertTrue((ROOT / "data" / "processed" / "matrix.json").exists())
@@ -39,3 +50,4 @@ class TestLauncher(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

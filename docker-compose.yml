@@ -1,0 +1,14 @@
+services:
+  dudu:
+    build: .
+    image: dudu:latest
+    container_name: dudu
+    ports:
+      - "8000:8000"
+    environment:
+      DUDU_RATE_LIMIT: "${DUDU_RATE_LIMIT:-120}"
+      DUDU_API_KEY: "${DUDU_API_KEY:-}"
+    restart: unless-stopped
+    volumes:
+      - ./data/processed:/app/data/processed
+

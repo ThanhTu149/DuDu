@@ -77,18 +77,28 @@ $env:DUDU_RATE_LIMIT = "120"
 - Nhận diện client qua header `X-Client-Id` (nếu có) hoặc địa chỉ kết nối; triển khai thật nên
   thay bằng IP sau proxy tin cậy.
 
-### Docker (tuỳ chọn)
+### Docker (tuỳ chọn — không cần cài Python)
+
+Docker Desktop phải đang chạy (icon "Engine running"). Lần đầu bấm đúp
+**`chay-bang-docker.bat`** — script tự build image, chạy container, chờ `/api/health` rồi mở
+trình duyệt. Các lần sau, sau khi Docker Desktop chạy:
 
 ```powershell
-docker build -t dudu .
-docker run --rm -p 8000:8000 dudu
+docker compose up -d        # chạy lại container đã build
 # mở http://127.0.0.1:8000
+docker compose down         # tắt
+docker compose up -d --build  # chỉ khi code/dữ liệu thay đổi
 ```
 
-Ảnh Docker dựa trên `python:3.11-slim`, có `HEALTHCHECK` gọi `/api/health`. Mô hình ETA và
-dữ liệu thô không nằm trong ảnh — thiếu mô hình thì web vẫn chạy bằng OSRM free-flow. Ảnh đã
-được build và chạy thử thật: `/api/health` trả `ok`, lập kế hoạch 12 đơn và trang chủ HTTP 200;
-kích thước ảnh ~773 MB (phần lớn là scipy/pandas/scikit-learn dùng cho ML).
+Ảnh dựa trên `python:3.11-slim`, có `HEALTHCHECK` gọi `/api/health`, container `restart:
+unless-stopped`. Mô hình ETA và dữ liệu thô không nằm trong ảnh — thiếu mô hình thì web vẫn
+chạy bằng OSRM free-flow. Đã build và chạy thử thật: `/api/health` trả `ok`, lập kế hoạch 12
+đơn và trang chủ HTTP 200; kích thước ảnh ~773 MB (phần lớn scipy/pandas/scikit-learn).
+
+**Ngày thường chỉ cần `run.bat`** (nhẹ, nhanh, không cần Docker Desktop). Docker dùng khi đưa
+sang máy khác / chấm bài không muốn cài Python.
+
+### Mô hình ETA (tuỳ chọn)
 
 ### Mô hình ETA (tuỳ chọn)
 
@@ -232,6 +242,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

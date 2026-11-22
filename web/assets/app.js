@@ -270,8 +270,19 @@ function initMapControls() {
   fitView();
 }
 
-async function api(path, options) {
-  const response = await fetch(path, options);
+function storedApiKey() {
+  try {
+    return localStorage.getItem("dudu:api-key") || "";
+  } catch {
+    return "";
+  }
+}
+
+async function api(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const apiKey = storedApiKey();
+  if (apiKey) headers.set("X-API-Key", apiKey);
+  const response = await fetch(path, { ...options, headers });
   if (!response.ok) {
     let message = `${response.status} ${path}`;
     try {
@@ -281,6 +292,12 @@ async function api(path, options) {
       }
     } catch {
       /* body không phải JSON — giữ thông báo mặc định */
+    }
+    if (response.status === 401) {
+      message = `[401] ${message} — mở “Cấu hình giả lập” và nhập API key của server`;
+    }
+    if (response.status === 429) {
+      message = `[429] ${message} — chờ vài giây rồi thử lại`;
     }
     throw new Error(message);
   }
@@ -1897,6 +1914,21 @@ async function loadEtaInfo() {
   });
   $("#import-btn")?.addEventListener("click", () => $("#import-file")?.click());
   $("#import-file")?.addEventListener("change", importCsvPlan);
+
+  const apiKeyInput = $("#api-key");
+  if (apiKeyInput) {
+    apiKeyInput.value = storedApiKey();
+    apiKeyInput.addEventListener("change", () => {
+      const value = apiKeyInput.value.trim();
+      try {
+        if (value) localStorage.setItem("dudu:api-key", value);
+        else localStorage.removeItem("dudu:api-key");
+      } catch {
+        /* trình duyệt chặn localStorage — API key chỉ dùng trong phiên */
+      }
+      toast(value ? "Đã lưu API key cho trình duyệt này" : "Đã xoá API key");
+    });
+  }
   $("#compare-btn").addEventListener("click", openCompare);
   $("#export-btn").addEventListener("click", exportCsv);
   $("#print-btn").addEventListener("click", printPlan);
@@ -2047,14 +2079,34 @@ async function loadEtaInfo() {
   });
   } catch (err) {
     console.error("Boot failed:", err);
+    const needsApiKey = String(err.message || "").includes("401");
     document.body.innerHTML = `<div class="boot-error">
       <h2>Không kết nối được máy chủ</h2>
       <p>DuDu cần API backend để hoạt động. Hãy chắc chắn rằng server đang chạy và thử tải lại trang.</p>
       <p style="font-family:var(--mono);font-size:12px;color:var(--ink-3)">${esc(err.message)}</p>
-      <button class="btn btn-primary" onclick="location.reload()">Tải lại trang</button>
+      ${needsApiKey ? `
+        <form id="boot-key-form" style="display:flex;gap:8px;justify-content:center;margin:10px 0">
+          <input id="boot-api-key" type="password" placeholder="Nhập API key của server"
+                 style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)" />
+          <button class="btn btn-primary" type="submit">Lưu &amp; tải lại</button>
+        </form>` : `<button class="btn btn-primary" onclick="location.reload()">Tải lại trang</button>`}
     </div>`;
+    const keyForm = document.getElementById("boot-key-form");
+    if (keyForm) {
+      keyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const value = document.getElementById("boot-api-key").value.trim();
+        try {
+          localStorage.setItem("dudu:api-key", value);
+        } catch {
+          /* không lưu được thì vẫn tải lại để thử */
+        }
+        location.reload();
+      });
+    }
   }
 })();
+
 
 
 

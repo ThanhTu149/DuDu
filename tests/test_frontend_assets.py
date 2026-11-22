@@ -92,6 +92,9 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn('id="history-btn"', html)
         self.assertIn("openHistory", js)
         self.assertIn("/api/history", js)
+        self.assertIn('id="api-key"', html)
+        self.assertIn("dudu:api-key", js)
+        self.assertIn("X-API-Key", js)
 
     def test_map_legend_matches_symbols(self) -> None:
         # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
@@ -126,6 +129,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

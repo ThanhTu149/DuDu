@@ -1893,3 +1893,7 @@ body, .panel, .kpi-card, .route, .btn, .tab, .glass, .glass-pill, .badge-late, .
 .history-main b { margin-left: auto; color: var(--accent); font-weight: 600; }
 .history-meta { grid-area: meta; font-size: 11px; color: var(--ink-3); }
 .history-go { grid-area: go; align-self: center; font-size: 17px; color: var(--ink-3); }
+
+/* v22: ô API key trong popover cấu hình */
+#api-key { width: 132px; letter-spacing: .04em; }
+#api-key::placeholder { font-family: var(--sans); letter-spacing: 0; color: var(--ink-3); }
