@@ -218,8 +218,7 @@ Nói rõ để người đọc không hiểu nhầm số liệu là thực tế 
 2. **Đồ thị chỉ có 16 nút** (bưu cục, cảng, chợ đầu mối). Khoảng cách giữa các nút là số thật
    từ OSRM, nhưng tuyến trong phố nhỏ không được mô hình hoá; đây là mức trừu tượng phù hợp
    cho bài toán chia đơn, không phải chỉ đường từng ngõ.
-3. **Đơn hàng mô phỏng theo seed** (chế độ mặc định; hệ thống đã hỗ trợ nhập lô đơn thật từ
-   CSV), không phải lô đơn thật. Ưu điểm của chế độ seed là tái lập được kết quả.
+3. **Đơn hàng mô phỏng theo seed** (không phải lô đơn thật; hệ thống có hỗ trợ nhập lô đơn thật từ CSV). Ưu điểm của chế độ seed là tái lập được kết quả.
 4. **A\* trên đồ thị đầy đủ**: nếu không có chặn, đường tối ưu luôn là đi thẳng, nên A\* chỉ
    thật sự có tác dụng khi mô phỏng kẹt xe (một số chặng xuyên tâm bị chặn, xe phải vòng).
 5. **Chưa có dữ liệu giao thông thời gian thực**, hệ số ùn tắc là giả định theo khung giờ.
