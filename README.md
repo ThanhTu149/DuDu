@@ -3,11 +3,11 @@
 [![CI](https://github.com/ThanhTu149/DuDu/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ThanhTu149/DuDu/actions/workflows/ci.yml)
 [![E2E](https://github.com/ThanhTu149/DuDu/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/ThanhTu149/DuDu/actions/workflows/e2e.yml)
 
-**Sinh viên thực hiện:** Lê Thanh Tú — MSSV 049206004778 — Nhóm 14
+**Sinh viên thực hiện:** Lê Thanh Tú — Nhóm 14
 
 **Giảng viên hướng dẫn:** Bùi Trọng Hiếu
 
-**Học phần:** Trí tuệ nhân tạo (121033) — Trường Đại học Giao thông Vận tải TP.HCM
+**Học phần:** Trí tuệ nhân tạo — Trường Đại học Giao thông Vận tải TP.HCM
 
 <img src="web/assets/banner.jpg" alt="DuDu — Hệ thống điều phối và tối ưu giao hàng nội thành" width="880" />
 
