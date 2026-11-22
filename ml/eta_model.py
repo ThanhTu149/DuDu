@@ -1,9 +1,11 @@
 """Bọc mô hình ETA đã huấn luyện để phần còn lại của hệ thống dùng được.
 
-Hai cách dùng:
+Ba cách dùng:
 
   - `predict_native(distance_km, hour, weekday)` — dự đoán theo đúng miền dữ liệu huấn
     luyện (chuyến taxi NYC). Dùng để trả lời khách hoặc để kiểm tra mô hình.
+  - `interval_native(...)` — khoảng tin cậy 80% học từ phân vị phần dư
+    (`ml/calibrate_eta.py` lưu trong `ml/models/eta_quantiles.json`).
   - `hcm_minutes(osrm_min, hour)` — áp lên thời gian free-flow của OSRM TP.HCM bằng hệ số
     ùn tắc theo giờ mà mô hình học được. Đây là cách dùng trong xếp tuyến: OSRM cho biết
     đi bao lâu khi đường thoáng, mô hình cho biết giờ đó đường đông gấp mấy lần.
@@ -19,14 +21,17 @@ import numpy as np
 MODEL_DIR = Path(__file__).resolve().parent / "models"
 RF_PATH = MODEL_DIR / "eta_rf.joblib"
 METRICS_PATH = MODEL_DIR / "eta_metrics.json"
+QUANTILES_PATH = MODEL_DIR / "eta_quantiles.json"
 
 
 class EtaModel:
-    def __init__(self, regressor, metrics: dict) -> None:
+    def __init__(self, regressor, metrics: dict, quantiles: dict | None = None) -> None:
         self.regressor = regressor
         self.metrics = metrics
         self.features = metrics["features"]
         self.multiplier = {int(k): float(v) for k, v in metrics["hour_multiplier"].items()}
+        # Khoảng tin cậy 80% học từ phân vị phần dư; có thể thiếu nếu chưa hiệu chuẩn
+        self.quantiles = quantiles
 
     @classmethod
     def load(cls) -> "EtaModel | None":
@@ -34,7 +39,14 @@ class EtaModel:
             return None
         from joblib import load
 
-        return cls(load(RF_PATH), json.loads(METRICS_PATH.read_text(encoding="utf-8")))
+        metrics = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
+        quantiles = None
+        if QUANTILES_PATH.exists():
+            try:
+                quantiles = json.loads(QUANTILES_PATH.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                quantiles = None
+        return cls(load(RF_PATH), metrics, quantiles)
 
     # -- dự đoán -- ------------------------------------------------------
     def _vector(self, distance_km: float, hour: int, weekday: int) -> np.ndarray:
@@ -49,6 +61,40 @@ class EtaModel:
     def predict_native(self, distance_km: float, hour: int, weekday: int = 2) -> float:
         """Thời gian dự đoán (phút) theo miền dữ liệu huấn luyện."""
         return float(self.regressor.predict(self._vector(distance_km, hour, weekday))[0])
+
+    def interval_native(self, distance_km: float, hour: int, weekday: int = 2) -> dict:
+        """Khoảng tin cậy 80% cho một chặng theo miền dữ liệu huấn luyện."""
+        predicted = self.predict_native(distance_km, hour, weekday)
+        if not self.quantiles or not self.quantiles.get("bins"):
+            return {
+                "predicted_min": round(predicted, 2),
+                "low_min": None,
+                "high_min": None,
+                "coverage": None,
+                "method": "chưa hiệu chuẩn",
+            }
+        bins = self.quantiles["bins"]
+        chosen = next((item for item in bins if predicted <= item["upper_min"]), bins[-1])
+        low = max(0.1, predicted + float(chosen["q10"]))
+        high = max(low + 0.1, predicted + float(chosen["q90"]))
+        return {
+            "predicted_min": round(predicted, 2),
+            "low_min": round(low, 2),
+            "high_min": round(high, 2),
+            "coverage": float(self.quantiles.get("nominal_coverage", 0.8)),
+            "method": self.quantiles.get("method", "residual_deciles_by_predicted_duration"),
+        }
+
+    def interval_summary(self) -> dict | None:
+        if not self.quantiles:
+            return None
+        return {
+            "nominal_coverage": self.quantiles.get("nominal_coverage"),
+            "coverage_actual": self.quantiles.get("coverage_actual"),
+            "mean_width_min": self.quantiles.get("mean_width_min"),
+            "bins": len(self.quantiles.get("bins", [])),
+            "calibration_rows": self.quantiles.get("calibration_rows"),
+        }
 
     def hour_factor(self, hour: int) -> float:
         return self.multiplier.get(int(hour) % 24, 1.0)
@@ -65,4 +111,5 @@ class EtaModel:
             "rows": self.metrics["rows"],
             "source": self.metrics.get("source"),
             "trained_at": self.metrics.get("trained_at"),
+            "interval": self.interval_summary(),
         }

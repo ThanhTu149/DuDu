@@ -91,3 +91,12 @@ python ml/advanced_eval.py --report   # -> docs/ket-qua-eta-nang-cao.md
 Ba phần: tuning HistGradientBoosting bằng rolling-origin CV, khoảng tin cậy thực nghiệm 80%
 (học phân vị phần dư theo nhóm dự đoán), và ablation từng nhóm đặc trưng. Script chỉ ghi báo
 cáo, không ghi đè mô hình hay `eta_metrics.json` đang dùng cho demo.
+
+## Hiệu chuẩn khoảng tin cậy
+
+```powershell
+python ml/calibrate_eta.py   # -> ml/models/eta_quantiles.json (commit được, ~1 KB)
+```
+
+Học phân vị 10%/90% phần dư theo 10 nhóm dự đoán trên ngày 25–27, đo độ phủ trên ngày 28–31;
+API dùng file này cho `GET /api/eta/interval`.

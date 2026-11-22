@@ -51,3 +51,13 @@ mô hình đầy đủ.
 
 Đọc kết quả: quãng đường vẫn là đặc trưng quyết định; các đặc trưng thời gian đóng góp
 phần còn lại và đặc biệt quan trọng khi so sánh cao điểm với ngoài cao điểm.
+
+## Tái lập khoảng tin cậy
+
+```powershell
+python ml/train_eta.py          # nếu chưa có mô hình
+python ml/calibrate_eta.py      # sinh ml/models/eta_quantiles.json
+```
+
+File JSON nhỏ (~1 KB) được commit để API trả khoảng tin cậy ngay cả khi mô hình nặng không
+nằm trong git; nếu thiếu file, `/api/eta/interval` trả 503 kèm hướng dẫn.

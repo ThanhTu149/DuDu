@@ -44,10 +44,13 @@ class TestLauncher(unittest.TestCase):
 
     def test_required_runtime_files_exist(self) -> None:
         self.assertTrue((ROOT / "requirements.txt").exists())
+        self.assertTrue((ROOT / "requirements-lock.txt").exists())
+        self.assertIn("==", (ROOT / "requirements-lock.txt").read_text(encoding="utf-8"))
         self.assertTrue((ROOT / "data" / "processed" / "matrix.json").exists())
         self.assertTrue((ROOT / "backend" / "app.py").exists())
 
 
 if __name__ == "__main__":
     unittest.main()
+
 

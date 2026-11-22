@@ -91,13 +91,13 @@ def save(kind: str, request: dict, result: dict) -> int | None:
         return None
 
 
-def recent(limit: int = 20) -> list[dict]:
+def recent(limit: int = 20, offset: int = 0) -> list[dict]:
     try:
         init()
         with closing(_connect()) as connection, connection:
             rows = connection.execute(
-                "SELECT id, created_at, kind, summary_json FROM plans ORDER BY id DESC LIMIT ?",
-                (limit,),
+                "SELECT id, created_at, kind, summary_json FROM plans ORDER BY id DESC LIMIT ? OFFSET ?",
+                (limit, max(0, offset)),
             ).fetchall()
     except Exception:
         return []
@@ -110,6 +110,40 @@ def recent(limit: int = 20) -> list[dict]:
         }
         for row in rows
     ]
+
+
+def count() -> int:
+    try:
+        init()
+        with closing(_connect()) as connection, connection:
+            row = connection.execute("SELECT COUNT(*) AS total FROM plans").fetchone()
+        return int(row["total"])
+    except Exception:
+        return 0
+
+
+def delete(plan_id: int) -> bool:
+    try:
+        init()
+        with closing(_connect()) as connection, connection:
+            cursor = connection.execute("DELETE FROM plans WHERE id = ?", (plan_id,))
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+
+
+def prune(keep: int = 200) -> int:
+    """Giữ tối đa `keep` bản ghi mới nhất (gọi định kỳ nếu DB phình)."""
+    try:
+        init()
+        with closing(_connect()) as connection, connection:
+            cursor = connection.execute(
+                "DELETE FROM plans WHERE id NOT IN (SELECT id FROM plans ORDER BY id DESC LIMIT ?)",
+                (max(1, keep),),
+            )
+        return cursor.rowcount
+    except Exception:
+        return 0
 
 
 def get(plan_id: int) -> dict | None:

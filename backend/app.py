@@ -30,6 +30,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .dispatch.agent import DispatcherAgent
 from .dispatch.evaluate import compare_routing, compare_strategies
+from .dispatch.history import count as history_count
+from .dispatch.history import delete as history_delete_record
 from .dispatch.history import get as history_get
 from .dispatch.history import recent as history_recent
 from .dispatch.history import save as history_save
@@ -330,8 +332,16 @@ def orders_template():
 
 
 @app.get("/api/history")
-def history_list(limit: int = Query(20, ge=1, le=100)) -> dict:
-    return {"items": history_recent(limit)}
+def history_list(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0, le=10_000),
+) -> dict:
+    return {
+        "items": history_recent(limit, offset),
+        "total": history_count(),
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @app.get("/api/history/{plan_id}")
@@ -340,6 +350,13 @@ def history_detail(plan_id: int) -> dict:
     if record is None:
         raise HTTPException(status_code=404, detail="không có bản ghi lịch sử này")
     return record
+
+
+@app.delete("/api/history/{plan_id}")
+def history_delete(plan_id: int) -> dict:
+    if not history_delete_record(plan_id):
+        raise HTTPException(status_code=404, detail="không có bản ghi lịch sử này")
+    return {"deleted": True, "id": plan_id, "total": history_count()}
 
 
 @app.get("/api/eta/info")
@@ -368,6 +385,29 @@ def eta_predict(
         "hour_factor": model.hour_factor(hour),
         "note": "eta_native_min theo miền dữ liệu huấn luyện (taxi đô thị); thời gian TP.HCM "
                 "lấy từ OSRM nhân hour_factor.",
+    }
+
+
+@app.get("/api/eta/interval")
+def eta_interval(
+    distance_km: float = Query(..., gt=0, le=60),
+    hour: int = Query(8, ge=0, le=23),
+    weekday: int = Query(2, ge=0, le=6),
+) -> dict:
+    """Khoảng tin cậy 80% cho một chặng (học từ phân vị phần dư của mô hình)."""
+    model = eta_model()
+    if model is None:
+        raise HTTPException(503, "chưa có mô hình ETA")
+    result = model.interval_native(distance_km, hour, weekday)
+    if result.get("low_min") is None:
+        raise HTTPException(503, "mô hình chưa hiệu chuẩn khoảng tin cậy — chạy python ml/calibrate_eta.py")
+    return {
+        "distance_km": distance_km,
+        "hour": hour,
+        "weekday": weekday,
+        **result,
+        "note": "Khoảng 80% theo miền dữ liệu huấn luyện NYC; dùng để biết mức bất định, "
+                "không phải cam kết cho TP.HCM.",
     }
 
 

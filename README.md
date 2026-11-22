@@ -213,6 +213,9 @@ Chi tiết nguồn dữ liệu, cách tái tạo: `docs/DATA.md`.
 
 ## Ghi chú
 
+Môi trường tái lập: `requirements-lock.txt` (+ `requirements-dev-lock.txt`) khoá đúng phiên bản
+đã kiểm thử; Docker và CI dùng các file này. `requirements.txt` giữ dải `>=` cho ai muốn bản mới.
+
 Repo dùng commit theo từng bước công việc nhỏ, chia theo mảng để lịch sử đọc được như nhật
 ký làm việc. Xem `docs/PLAN.md` để biết tiến độ.
 
@@ -242,6 +245,7 @@ Sinh viên thực hiện: Lê Thanh Tú — Nhóm 14.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

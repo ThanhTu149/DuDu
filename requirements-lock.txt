@@ -1,0 +1,10 @@
+# Khoá phiên bản runtime đã kiểm thử (Python 3.11).
+# Dùng cho Docker / CI để máy khác tái lập đúng môi trường:
+#   pip install -r requirements-lock.txt
+# requirements.txt (dải >=) giữ cho người phát triển muốn bản mới nhất.
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+scikit-learn==1.9.1
+numpy==2.3.5
+pandas==3.0.1
+pydantic==2.14.4

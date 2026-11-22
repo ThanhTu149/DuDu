@@ -65,3 +65,7 @@ Nút **Lịch sử** cạnh nút **Nhập CSV** mở danh sách 20 kế hoạch 
 sự cố). Bấm một dòng để khôi phục: bản đồ, KPI, tuyến theo tài xế, nhật ký, bảng luật và Gantt
 được vẽ lại đúng như lúc lập; toast xác nhận số đơn, km, số trễ. Đóng bằng `Esc`, nút ×, hoặc
 bấm nền.
+
+`GET /api/history` có phân trang (`limit`, `offset`, trả thêm `total`); `DELETE /api/history/{id}`
+xoá một bản ghi. Trên giao diện: nút **×** cạnh mỗi dòng để xoá (có xác nhận) và nút
+**Tải thêm** khi còn bản ghi cũ hơn.

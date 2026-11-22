@@ -19,7 +19,7 @@ jobs:
       - name: Cài phụ thuộc
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          pip install -r requirements-lock.txt -r requirements-dev-lock.txt
 
       - name: Kiểm thử lõi + đo độ phủ (không cần mô hình ETA)
         run: |
@@ -31,5 +31,6 @@ jobs:
 
       - name: Kiểm tra API import được
         run: python -c "from backend.app import app; print(len(app.routes), 'routes')"
+
 
 

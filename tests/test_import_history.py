@@ -123,13 +123,35 @@ class TestImportAndHistoryApi(unittest.TestCase):
         csv = SAMPLE_CSV.read_text(encoding="utf-8")
         created = self.client.post("/api/plan/import", json={"csv": csv, "seed": 11, "vehicles": 6}).json()
         listing = self.client.get("/api/history?limit=5").json()
-        self.assertTrue(listing["items"])
+        self.assertGreaterEqual(listing["total"], 1)
+        self.assertEqual(listing["limit"], 5)
         ids = [item["id"] for item in listing["items"]]
         self.assertIn(created["history_id"], ids)
 
         detail = self.client.get(f"/api/history/{created['history_id']}").json()
         self.assertEqual(detail["kind"], "import")
         self.assertEqual(detail["payload"]["metrics"]["orders"], 12)
+
+    def test_history_pagination(self) -> None:
+        csv = SAMPLE_CSV.read_text(encoding="utf-8")
+        for seed in (21, 22, 23):
+            self.client.post("/api/plan/import", json={"csv": csv, "seed": seed, "vehicles": 6})
+        first = self.client.get("/api/history?limit=2&offset=0").json()
+        second = self.client.get("/api/history?limit=2&offset=2").json()
+        self.assertEqual(len(first["items"]), 2)
+        self.assertGreaterEqual(first["total"], 3)
+        self.assertTrue(second["items"])
+        self.assertFalse({item["id"] for item in first["items"]} & {item["id"] for item in second["items"]})
+
+    def test_history_delete(self) -> None:
+        csv = SAMPLE_CSV.read_text(encoding="utf-8")
+        created = self.client.post("/api/plan/import", json={"csv": csv, "seed": 31, "vehicles": 6}).json()
+        plan_id = created["history_id"]
+        response = self.client.delete(f"/api/history/{plan_id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["deleted"])
+        self.assertEqual(self.client.get(f"/api/history/{plan_id}").status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/history/{plan_id}").status_code, 404)
 
     def test_history_unknown_id_returns_404(self) -> None:
         response = self.client.get("/api/history/999999")
@@ -143,4 +165,5 @@ class TestImportAndHistoryApi(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

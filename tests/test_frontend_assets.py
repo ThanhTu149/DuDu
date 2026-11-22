@@ -95,6 +95,10 @@ class TestFrontendAssets(unittest.TestCase):
         self.assertIn('id="api-key"', html)
         self.assertIn("dudu:api-key", js)
         self.assertIn("X-API-Key", js)
+        self.assertIn('id="eta-ci-note"', html)
+        self.assertIn("info.interval", js)
+        self.assertIn(".history-del", js)
+        self.assertIn("history?limit=20&offset=", js)
 
     def test_map_legend_matches_symbols(self) -> None:
         # chú thích phải dùng đúng 2 huy hiệu + 2 chấm như trên bản đồ, không còn chấm/vuông cũ
@@ -129,6 +133,7 @@ class TestFrontendAssets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

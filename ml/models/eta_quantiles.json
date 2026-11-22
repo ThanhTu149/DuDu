@@ -1,0 +1,60 @@
+{
+  "nominal_coverage": 0.8,
+  "method": "residual_deciles_by_predicted_duration",
+  "calibration_rows": 22245,
+  "evaluation_rows": 25682,
+  "coverage_actual": 0.8126,
+  "mean_width_min": 11.261,
+  "bins": [
+    {
+      "upper_min": 5.623,
+      "q10": -1.73,
+      "q90": 2.68
+    },
+    {
+      "upper_min": 7.259,
+      "q10": -2.216,
+      "q90": 3.837
+    },
+    {
+      "upper_min": 8.777,
+      "q10": -2.862,
+      "q90": 4.216
+    },
+    {
+      "upper_min": 10.237,
+      "q10": -3.106,
+      "q90": 4.595
+    },
+    {
+      "upper_min": 11.964,
+      "q10": -3.236,
+      "q90": 5.797
+    },
+    {
+      "upper_min": 13.838,
+      "q10": -3.741,
+      "q90": 6.233
+    },
+    {
+      "upper_min": 16.696,
+      "q10": -4.217,
+      "q90": 7.008
+    },
+    {
+      "upper_min": 20.707,
+      "q10": -5.016,
+      "q90": 8.184
+    },
+    {
+      "upper_min": 25.847,
+      "q10": -7.34,
+      "q90": 11.059
+    },
+    {
+      "upper_min": 75.523,
+      "q10": -9.899,
+      "q90": 17.224
+    }
+  ]
+}
