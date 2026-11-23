@@ -17,6 +17,7 @@ const fs = require("fs");
 const { chromium } = require("playwright");
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:8000";
+const APP_ORIGIN = new URL(BASE_URL).origin;
 const ARTIFACT_DIR = path.join(__dirname, "artifacts");
 const SAMPLE_CSV = path.join(__dirname, "..", "..", "data", "samples", "don-hang-mau.csv");
 
@@ -140,4 +141,6 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
+
 

@@ -205,9 +205,19 @@ class RoutingView:
     def heuristic(self, a: str, b: str) -> float:
         return self.base.heuristic(a, b)
 
-    def summary(self) -> dict:
+    def summary(self, legs: list[tuple[str, str]] | None = None) -> dict:
+        """Thống kê các chặng A* phải đi vòng.
+
+        Nếu truyền `legs` (các cặp nút thực sự nằm trên tuyến cuối), chỉ tính những chặng
+        đó — tránh trường hợp thuật toán thử nhiều phương án (2-opt tính trước ma trận)
+        làm thống kê "đi vòng" bị phồng lên dù tuyến cuối không dùng các chặng ấy.
+        """
+        items = self.detours
+        if legs is not None:
+            used = {frozenset(pair) for pair in legs if pair[0] != pair[1]}
+            items = [item for item in self.detours if frozenset((item["from"], item["to"])) in used]
         return {
-            "detour_legs": len(self.detours),
-            "extra_km": round(sum(item["extra_km"] for item in self.detours), 2),
-            "paths": self.detours[:6],
+            "detour_legs": len(items),
+            "extra_km": round(sum(item["extra_km"] for item in items), 2),
+            "paths": items[:6],
         }

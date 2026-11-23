@@ -133,7 +133,7 @@ python ml/train_eta.py
 ```powershell
 python data/build_matrix.py            # gọi OSRM sinh lại ma trận (cần mạng)
 python -m backend.dispatch.evaluate --report   # sinh bảng kết quả VRP
-python -m unittest discover -s tests -v        # 142 ca kiểm thử
+python -m unittest discover -s tests -v        # 143 ca kiểm thử
 ```
 
 ## Dữ liệu
@@ -160,8 +160,9 @@ python ml/advanced_eval.py --report             # -> docs/ket-qua-eta-nang-cao.m
 - **Độ bền vững** (`docs/ket-qua-do-ben.md`): 30 seed × (48 đơn, 8 xe) cho quãng đường
   179,5 ± 36,3 km, đúng giờ 99,4 ± 1,3%; 2-opt giảm 29,3% quãng đường so với thứ tự nhập đơn;
   chiến lược `deadline` thêm 9,7% km nhưng kéo đơn trễ từ 2,23 xuống 0,27.
-- **Độ nhạy tham số**: `max_rounds` hội tụ sau 4 vòng; bán kính vùng ùn tắc 2→8 km làm A*
-  phải đi vòng 3,5→227,4 km, là căn cứ chọn mặc định 4,5 km.
+- **Độ nhạy tham số**: `max_rounds` hội tụ sau 4 vòng; bán kính vùng ùn tắc 2→8 km làm số
+  chặng phải đi vòng tăng 0→7,3 và quãng đường vòng thêm 0→91,2 km, là căn cứ chọn mặc định
+  4,5 km (bắt đầu có chặng vòng thực tế nhưng không quá dài).
 - **ETA nâng cao** (`docs/ket-qua-eta-nang-cao.md`): tuning 7 cấu hình HGB bằng rolling-origin
   CV (3 fold); khoảng tin cậy 80% học từ phân vị phần dư đạt độ phủ **81,3%**, rộng trung bình
   11,3 phút so với baseline ±15% chỉ phủ 40,0%; bỏ nhóm đặc trưng giờ làm MAE tăng
@@ -202,7 +203,7 @@ pip install -r requirements-lock.txt -r requirements-dev-lock.txt   # bản kho�
 python -m unittest discover -s tests -v
 ```
 
-**142 ca kiểm thử** trong `tests/` phủ các nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
+**143 ca kiểm thử** trong `tests/` phủ các nhóm: mạng lưới và A* (gồm cả việc A* bắt buộc phải
 đi vòng khi chặng bị chặn), bài toán gán Hungarian (đối chiếu với vét cạn), xếp tuyến (2-opt
 không bao giờ làm xấu kết quả, tổng km khớp), 12 luật vận hành, tác tử + API + toàn vẹn dữ
 liệu, nhập CSV + lịch sử kế hoạch, frontend/launcher và khoảng tin cậy ETA.
@@ -263,6 +264,7 @@ ký làm việc. Xem `docs/PLAN.md` để biết tiến độ.
 
 Các tệp kết quả đều sinh tự động bằng lệnh trong mã nguồn, chạy lại thực nghiệm là số liệu
 tự khớp.
+
 
 
 

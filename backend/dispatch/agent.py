@@ -252,7 +252,8 @@ class DispatcherAgent:
                   else f"Phân bổ lại {len(self.orders)} đơn cho {len(self.vehicles)} xe.")
         self._log("act", "Chia lại toàn bộ đơn", detail)
         if self.view and self.view.detours:
-            summary = self.view.summary()
+            used_legs = [(leg["from"], leg["to"]) for route in routes for leg in route.legs]
+            summary = self.view.summary(used_legs)
             examples = "; ".join(
                 f"{item['from']}→{item['to']} qua {'→'.join(item['path'][1:-1]) or 'đường vành đai'}"
                 for item in summary["paths"][:2]

@@ -98,6 +98,16 @@ class TestRoutingView(unittest.TestCase):
         self.assertEqual(view.summary()["detour_legs"], 1)
         self.assertGreater(view.summary()["extra_km"], 0.0)
 
+    def test_summary_can_filter_to_used_legs(self) -> None:
+        # 2-opt tính trước ma trận nên có thể chạm chặng bị chặn không nằm trên tuyến cuối;
+        # thống kê phải lọc theo các chặng thực sự dùng để không báo "đi vòng" khống.
+        view = RoutingView(self.net, self.edges)
+        view.dur(self.a, self.b)
+        self.assertEqual(view.summary()["detour_legs"], 1)
+        self.assertEqual(view.summary([])["detour_legs"], 0)
+        self.assertEqual(view.summary([(self.a, self.b)])["detour_legs"], 1)
+        self.assertGreater(view.summary([(self.a, self.b)])["extra_km"], 0.0)
+
     def test_unblocked_leg_matches_network(self) -> None:
         view = RoutingView(self.net, self.edges)
         free = ("q1", "cat-lai") if frozenset(("q1", "cat-lai")) not in self.edges else ("tan-binh", "cat-lai")

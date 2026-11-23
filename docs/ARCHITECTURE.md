@@ -54,12 +54,12 @@ dataclass có `as_dict()`. Nhờ vậy API và giao diện không phụ thuộc 
 | `GET /api/eta/predict?distance_km&hour&weekday` | dự đoán ETA cho một chặng |
 | `GET /api/geometry?a&b` | đường đi thật giữa 2 nút (cache đĩa, khoá ghi) |
 | `GET /api/eta/interval?distance_km&hour&weekday` | khoảng tin cậy 80% cho một chặng (phân vị phần dư) |
-| `GET /api/history?limit&offset` | lịch sử kế hoạch có phân trang (`items`, `total`) |
-| `DELETE /api/history/{id}` | xoá một bản ghi lịch sử |
 | `POST /api/plan/import` | lập kế hoạch từ CSV do người dùng nhập (`import.count`, `import.warnings`, `history_id`) |
 | `GET /api/orders/template` | tải CSV mẫu |
-| `GET /api/history` | 20 kế hoạch gần nhất (metadata + metrics tóm tắt) |
-| `GET /api/history/{id}` | khôi phục toàn bộ payload một kế hoạch |
+| `GET /api/history?limit&offset` | lịch sử kế hoạch có phân trang (`items`, `total`) |
+| `GET /api/history/{plan_id}` | khôi phục toàn bộ payload một kế hoạch |
+| `DELETE /api/history/{plan_id}` | xoá một bản ghi lịch sử |
+| `DELETE /api/history` | xoá toàn bộ lịch sử (nút "Xoá tất cả") |
 
 ## Bảo mật
 

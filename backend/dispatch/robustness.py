@@ -143,7 +143,15 @@ def radius_sensitivity(net: Network, seeds: list[int], radii: tuple[float, ...] 
                 km.append(metrics["total_km"])
                 late.append(metrics["late_count"])
                 violations.append(metrics["violations"])
-                summary = agent.view.summary() if agent.view else {"extra_km": 0.0, "detour_legs": 0}
+                if agent.view:
+                    used_legs = [
+                        (leg["from"], leg["to"])
+                        for route in result["routes"]
+                        for leg in route["legs"]
+                    ]
+                    summary = agent.view.summary(used_legs)
+                else:
+                    summary = {"extra_km": 0.0, "detour_legs": 0}
                 extra_km.append(summary["extra_km"])
                 detour_legs.append(summary["detour_legs"])
             rows.append({
@@ -316,3 +324,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

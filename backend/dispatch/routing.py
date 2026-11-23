@@ -217,7 +217,7 @@ def two_opt(
     giống hệt bản cũ (đã đối chiếu bằng test hồi quy).
     """
     size = len(sequence)
-    if size < 3:
+    if size < 2:
         return list(sequence), 0
 
     hubs = [start] + [hub_id for _order_id, hub_id in sequence]
