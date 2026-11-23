@@ -1,10 +1,10 @@
-﻿# tools/run-web.ps1 — chạy web DuDu bằng một lệnh.
+# tools/run-web.ps1 — chạy web DuDu bằng một lệnh.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\run-web.ps1
 #   (hoặc bấm đúp run.bat ở thư mục gốc repo)
 #
 # Script tự tìm Python có đủ fastapi/uvicorn theo thứ tự: biến DUDU_PYTHON → .venv →
-# python/python3 trên PATH → bản Python của DeepSeek Harness (nếu máy có). Nếu cổng 8000
+# python/python3 trên PATH → một số bản Python cài kèm công cụ phát triển (nếu có). Nếu cổng 8000
 # đang bận vì DuDu chạy sẵn, nó chỉ mở trình duyệt; nếu cổng bận vì app khác, nó tự nhảy
 # sang 8010/8020/…
 
@@ -36,7 +36,7 @@ function Resolve-Python {
     $candidates += "python"
     $candidates += "python3"
 
-    # Python đi kèm DeepSeek Harness (nếu máy có cài)
+    # Một số bản Python cài kèm công cụ phát triển trên máy (nếu có)
     $runtimeDir = Join-Path $HOME ".dsh\dsh-runtimes"
     if (Test-Path $runtimeDir) {
         Get-ChildItem $runtimeDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
@@ -155,3 +155,4 @@ try {
     Write-Host "  Server đã dừng."
     if (-not $NoBrowser) { Read-Host "Nhấn Enter để đóng" }
 }
+

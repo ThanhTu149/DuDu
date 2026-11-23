@@ -53,11 +53,16 @@ async function main() {
   const consoleErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() !== "error") return;
+    const text = message.text();
+    // Font/CDN bên thứ ba hoặc favicon không phải lỗi của app; CI có thể chặn mạng ngoài.
+    if (/fonts\.googleapis\.com|fonts\.gstatic\.com|favicon\.ico/.test(text)) return;
+    consoleErrors.push(text);
   });
   page.on("response", (response) => {
-    if (response.status() >= 400) {
-      badResponses.push(`${response.status()} ${response.url()}`);
+    const url = response.url();
+    if (response.status() >= 400 && url.startsWith(APP_ORIGIN) && !url.endsWith("/favicon.ico")) {
+      badResponses.push(`${response.status()} ${url}`);
     }
   });
 
@@ -137,6 +142,7 @@ async function main() {
         message: error.message,
         steps,
         pageErrors,
+        consoleErrors,
         badResponses,
       }, null, 2));
     } catch {
@@ -147,6 +153,7 @@ async function main() {
       message: error.message,
       steps,
       pageErrors,
+      consoleErrors,
       badResponses,
       artifact: ARTIFACT_DIR,
     }, null, 2));
