@@ -25,7 +25,25 @@ function fail(message) {
   throw new Error(message);
 }
 
+/**
+ * Chờ một điều kiện trong trang bằng cách poll qua `page.evaluate`.
+ *
+ * Không dùng `page.waitForFunction` của Playwright: một số bản (vd 1.49) chạy predicate
+ * bằng eval trong main world, sẽ bị CSP `script-src 'self'` chặn. `page.evaluate` dùng
+ * CDP callFunctionOn nên không bị chặn.
+ */
+async function waitFor(page, predicate, label, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await page.evaluate(predicate)) return;
+    await page.waitForTimeout(120);
+  }
+  fail(`hết thời gian chờ: ${label}`);
+}
+
 async function main() {
+  // Dọn ảnh lỗi của lần chạy trước để artifact không gây nhầm lẫn.
+  fs.rmSync(ARTIFACT_DIR, { recursive: true, force: true });
   // CI để trống; máy dev có thể chỉ định Chromium sẵn có qua E2E_CHROMIUM
   const launchOptions = process.env.E2E_CHROMIUM ? { executablePath: process.env.E2E_CHROMIUM } : {};
   const browser = await chromium.launch(launchOptions);
@@ -72,10 +90,10 @@ async function main() {
 
     // 1. Lập kế hoạch mặc định
     await page.click("#plan-btn");
-    await page.waitForFunction(
+    await waitFor(
+      page,
       () => (document.querySelector("#kpi-note")?.textContent || "").includes("48 điểm giao"),
-      null,
-      { timeout: 30000 },
+      "kế hoạch 48 đơn",
     );
     steps.push("plan-48");
 
@@ -85,21 +103,22 @@ async function main() {
     const historyCount = await page.locator(".history-item").count();
     if (historyCount < 1) fail("lịch sử không có bản ghi nào");
     await page.click(".history-item");
-    await page.waitForFunction(() => document.querySelector("#modal")?.hidden === true, null, { timeout: 15000 });
-    await page.waitForFunction(
+    await waitFor(page, () => document.querySelector("#modal")?.hidden === true, "đóng modal lịch sử", 15000);
+    await waitFor(
+      page,
       () => (document.querySelector("#toast")?.textContent || "").includes("khôi phục"),
-      null,
-      { timeout: 15000 },
+      "toast khôi phục",
+      15000,
     );
     steps.push("history-restore");
 
     // 3. Nhập CSV mẫu
     if (!fs.existsSync(SAMPLE_CSV)) fail(`không thấy file mẫu: ${SAMPLE_CSV}`);
     await page.setInputFiles("#import-file", SAMPLE_CSV);
-    await page.waitForFunction(
+    await waitFor(
+      page,
       () => (document.querySelector("#kpi-note")?.textContent || "").includes("12 điểm giao"),
-      null,
-      { timeout: 30000 },
+      "kế hoạch nhập CSV 12 đơn",
     );
     const toast = await page.evaluate(() => document.querySelector("#toast")?.textContent.trim() || "");
     if (!toast.includes("Đã nhập 12 đơn")) fail(`toast nhập CSV không đúng: ${toast}`);
@@ -141,6 +160,7 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
 
 
 
