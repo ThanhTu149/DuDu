@@ -1,6 +1,6 @@
 # Module máy học: dự đoán thời gian giao (ETA)
 
-Chương 4 của báo cáo nằm ở đây.
+Mục 3.4 của báo cáo nằm ở đây.
 
 ## Dữ liệu
 
