@@ -1,7 +1,7 @@
 # Kết quả máy học: dự đoán ETA
 
 Số liệu dưới đây sinh ra bằng `python ml/train_eta.py` (seed cố định, chạy lại ra đúng
-từng số). Dùng trực tiếp cho mục 3.4 của báo cáo.
+từng số). Dùng trực tiếp cho mục 2.3 của báo cáo.
 
 ## Bộ dữ liệu
 
