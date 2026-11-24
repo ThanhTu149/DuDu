@@ -39,11 +39,11 @@ Theo dõi tiến độ các việc kỹ thuật. Quy ước chung:
 - Ba nút sự cố: xe hỏng, kẹt xe, kho đóng; API trả kèm `before` để so sánh trước–sau.
 - Dải so sánh hiển thị quãng đường, đơn trễ, vi phạm.
 
-## P5 — Hoàn thiện  🟡
+## P5 — Hoàn thiện  ✅
 
 - [x] Viết báo cáo và slide (nộp riêng, không nằm trong repo).
-- [ ] Điền tên thành viên vào bảng phân công.
-- [ ] Tập thuyết trình có bấm giờ, trước hạn 3 ngày.
+- [x] Điền tên thành viên vào bảng phân công (Lê Thanh Tú — 049206004778 — Nhóm 14).
+- [x] Tập thuyết trình có bấm giờ, trước hạn 3 ngày.
 
 ---
 

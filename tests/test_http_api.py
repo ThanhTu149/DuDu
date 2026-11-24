@@ -115,6 +115,16 @@ class TestHttpApi(unittest.TestCase):
         self.assertIn("before", payload)
         self.assertIn("incident", payload)
 
+    def test_incident_respects_eta_source(self) -> None:
+        response = self.client.post(
+            "/api/incident", json={"kind": "congestion", "orders": 8, "eta": "ml"}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("before", payload)
+        self.assertIn("metrics", payload)
+        self.assertIn(payload["strategy"]["eta"], ("osrm", "ml"))
+
     def test_incident_rejects_bad_kind(self) -> None:
         self.assertEqual(
             self.client.post("/api/incident", json={"kind": "khong_ton_tai"}).status_code, 422

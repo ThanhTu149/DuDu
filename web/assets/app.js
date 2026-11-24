@@ -1637,6 +1637,7 @@ async function simulateIncident(kind) {
     renderRoutes(result.routes);
     renderSteps(result.steps);
     renderViolations(result.violations, result.violations_initial?.length);
+    renderGantt();
     renderIncidentStrip(result);
     updateMascotFromIncident(kind, result);
     toast(`${INCIDENT_LABEL[kind]} — đã lập lại kế hoạch`);

@@ -57,12 +57,12 @@ Commit chia theo từng mảng để lịch sử đọc được như nhật ký
 
 ## 4. Tự soát trước khi nộp (trước hạn 1 tuần)
 
-- [ ] Thuật ngữ: rà toàn bộ báo cáo, thống nhất "tác tử", "trạng thái", "hàm heuristic",
+- [x] Thuật ngữ: rà toàn bộ báo cáo, thống nhất "tác tử", "trạng thái", "hàm heuristic",
       "cơ sở tri thức", "độ đo" — không dùng lẫn "bot/agent/AI model".
-- [ ] Lập luận: mỗi kỹ thuật phải có (a) vì sao chọn, (b) baseline, (c) số liệu, (d) kết luận.
-- [ ] Hình thức: font, lề, số trang, đánh số hình/bảng, tài liệu tham khảo.
-- [ ] Chạy lại `python -m backend.dispatch.evaluate --report` để số liệu trong báo cáo khớp repo.
-- [ ] Thuyết trình thử 10 phút, bấm giờ, có người phản biện.
+- [x] Lập luận: mỗi kỹ thuật phải có (a) vì sao chọn, (b) baseline, (c) số liệu, (d) kết luận.
+- [x] Hình thức: font, lề, số trang, đánh số hình/bảng, tài liệu tham khảo.
+- [x] Chạy lại `python -m backend.dispatch.evaluate --report` để số liệu trong báo cáo khớp repo.
+- [x] Thuyết trình thử 10 phút, bấm giờ, có người phản biện.
 
 ---
 

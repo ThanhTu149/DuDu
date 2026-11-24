@@ -176,8 +176,10 @@ def _copy_scenario(data: dict) -> tuple[list[dict], list[dict]]:
     return [dict(v) for v in data["vehicles"]], [dict(o) for o in data["orders"]]
 
 
-def _baseline_metrics(data: dict, assignment: str, routing: str) -> dict:
-    key = (data["seed"], len(data["orders"]), len(data["vehicles"]), assignment, routing)
+def _baseline_metrics(data: dict, assignment: str, routing: str, eta: str = "osrm") -> dict:
+    model = eta_model() if eta == "ml" else None
+    effective_eta = "ml" if model is not None else "osrm"
+    key = (data["seed"], len(data["orders"]), len(data["vehicles"]), assignment, routing, effective_eta)
     with _locks["before"]:
         if key in _before_metrics:
             _before_metrics.move_to_end(key)
@@ -189,6 +191,7 @@ def _baseline_metrics(data: dict, assignment: str, routing: str) -> dict:
             orders,
             assignment_strategy=assignment,
             routing_strategy=routing,
+            eta_model=model,
         ).plan()["metrics"]
         _before_metrics[key] = metrics
         while len(_before_metrics) > BEFORE_CACHE_SIZE:
@@ -452,14 +455,16 @@ def incident(payload: IncidentRequest) -> dict:
             counts[vehicle["start_hub"]] = counts.get(vehicle["start_hub"], 0) + 1
         hub_id = max(counts, key=counts.get)
 
-    before = _baseline_metrics(data, payload.assignment, payload.routing)
+    before = _baseline_metrics(data, payload.assignment, payload.routing, payload.eta)
     vehicles, orders = _copy_scenario(data)
+    model = eta_model() if payload.eta == "ml" else None
     result = DispatcherAgent(
         net,
         vehicles,
         orders,
         assignment_strategy=payload.assignment,
         routing_strategy=payload.routing,
+        eta_model=model,
     ).handle_incident(payload.kind, vehicle_id, hub_id)
     record = {
         "before": before,

@@ -36,7 +36,7 @@ xem phần "Hạn chế" trong README.
 
 - Đơn hàng **sinh bằng seed** (`backend/dispatch/scenario.py`): mã đơn, cửa hàng, khối lượng,
   thể tích, tiền thu hộ, khung giờ cam kết. Cùng seed → cùng lô đơn, tái lập được 100%.
-- Đội xe (7 xe) và tài xế là dữ liệu mô phỏng, không phải người thật.
+- Đội xe (8 xe mặc định, cấu hình 2–8 xe) và tài xế là dữ liệu mô phỏng, không phải người thật.
 - Toạ độ điểm giao lấy từ các nút có thật ở TP.HCM, không phát sinh toạ độ ngẫu nhiên ngoài
   bán kính cho phép.
 

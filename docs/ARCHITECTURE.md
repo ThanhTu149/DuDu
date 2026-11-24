@@ -15,7 +15,7 @@ Kịch bản (16 nút + 48 đơn)                      data/hubs.json, scenario.
 [3] Xếp tuyến từng xe     ── Nearest Neighbor → 2-opt ── ETA từng điểm    routing.py
         │
         ▼
-[4] Đối chiếu cơ sở luật  ── 8 luật IF–THEN, suy diễn tiến, có giải trình  rules.py
+[4] Đối chiếu cơ sở luật  ── 12 luật IF–THEN, suy diễn tiến, có giải trình rules.py
         │
         ▼
 [5] Tác tử sửa và lặp     ── vi phạm → đổi xe → lập lại tuyến → kiểm tra   agent.py

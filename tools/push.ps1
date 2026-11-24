@@ -19,8 +19,32 @@ if (-not $Message) {
 
 # 1. Kiểm thử
 Write-Host "== Kiểm thử ==" -ForegroundColor Cyan
-$python = $env:DSH_PYTHON
-if (-not $python -or -not (Test-Path $python)) { $python = "python" }
+function Resolve-TestPython {
+    $candidates = @()
+    if ($env:DUDU_PYTHON) { $candidates += $env:DUDU_PYTHON }
+    if ($env:DSH_PYTHON) { $candidates += $env:DSH_PYTHON }
+    $candidates += (Join-Path $root ".venv\Scripts\python.exe")
+    $runtimeDir = Join-Path $HOME ".dsh\dsh-runtimes"
+    if (Test-Path $runtimeDir) {
+        Get-ChildItem $runtimeDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $candidates += (Join-Path $_.FullName "dependencies\python\python.exe")
+        }
+    }
+    $candidates += "python"
+    $candidates += "python3"
+    foreach ($candidate in $candidates) {
+        if (-not $candidate) { continue }
+        $exists = (Test-Path $candidate) -or (Get-Command $candidate -ErrorAction SilentlyContinue)
+        if (-not $exists) { continue }
+        try {
+            & $candidate -c "import fastapi" *> $null
+            if ($LASTEXITCODE -eq 0) { return $candidate }
+        } catch {}
+    }
+    return "python"
+}
+$python = Resolve-TestPython
+Write-Host "Python: $python" -ForegroundColor DarkGray
 $env:PYTHONPATH = $root
 & $python -m unittest discover -s tests
 if ($LASTEXITCODE -ne 0) {

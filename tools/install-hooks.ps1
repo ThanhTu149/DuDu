@@ -19,12 +19,26 @@ $body = @'
 #!/bin/sh
 # Chặn push nếu kiểm thử hỏng (cài bởi tools/install-hooks.ps1)
 cd "$(git rev-parse --show-toplevel)" || exit 1
-PY="${DSH_PYTHON:-python}"
+PY="${DUDU_PYTHON:-${DSH_PYTHON:-}}"
+if [ -z "$PY" ] && [ -x ".venv/Scripts/python.exe" ]; then
+  PY=".venv/Scripts/python.exe"
+fi
+if [ -z "$PY" ]; then
+  for cand in "$HOME"/.dsh/dsh-runtimes/*/dependencies/python/python.exe python python3; do
+    if command -v "$cand" >/dev/null 2>&1 || [ -x "$cand" ]; then
+      if "$cand" -c "import fastapi" >/dev/null 2>&1; then
+        PY="$cand"
+        break
+      fi
+    fi
+  done
+fi
+PY="${PY:-python}"
 if ! "$PY" -c "import fastapi" >/dev/null 2>&1; then
   echo "[pre-push] Bỏ qua kiểm thử: python hiện tại chưa cài đủ phụ thuộc (requirements.txt)."
   exit 0
 fi
-echo "[pre-push] Đang chạy bộ kiểm thử…"
+echo "[pre-push] Đang chạy bộ kiểm thử bằng $PY…"
 "$PY" -m unittest discover -s tests -q || {
   echo "[pre-push] Kiểm thử hỏng — push bị chặn. Chạy: $PY -m unittest discover -s tests -v"
   exit 1
