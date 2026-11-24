@@ -1,4 +1,4 @@
-# tools/run-web.ps1 — chạy web DuDu bằng một lệnh.
+﻿# tools/run-web.ps1 — chạy web DuDu bằng một lệnh.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\run-web.ps1
 #   (hoặc bấm đúp run.bat ở thư mục gốc repo)
@@ -149,6 +149,7 @@ if (-not $NoBrowser) {
 }
 
 try {
+    $ErrorActionPreference = "Continue"
     & $python -m uvicorn backend.app:app --host 127.0.0.1 --port $Port
 } finally {
     Write-Host ""

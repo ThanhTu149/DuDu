@@ -23,7 +23,12 @@ class TestLauncher(unittest.TestCase):
     def test_run_web_script_has_key_parts(self) -> None:
         script = ROOT / "tools" / "run-web.ps1"
         self.assertTrue(script.exists(), "thiếu tools/run-web.ps1")
-        text = script.read_text(encoding="utf-8", errors="ignore")
+        for ps1 in (ROOT / "tools").glob("*.ps1"):
+            self.assertTrue(
+                ps1.read_bytes().startswith(b"\xef\xbb\xbf"),
+                f"{ps1.name} thiếu UTF-8 BOM nên Windows PowerShell 5.1 sẽ đọc nhầm mã hoá tiếng Việt",
+            )
+        text = script.read_text(encoding="utf-8-sig")
         for needle in ("Resolve-Python", "Test-DuDuRunning", "uvicorn", "backend.app:app", "requirements.txt"):
             self.assertIn(needle, text, f"run-web.ps1 thiếu {needle}")
 
