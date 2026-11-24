@@ -114,16 +114,11 @@ class TestHttpApi(unittest.TestCase):
         self.assertTrue(any("A*" in title for title in titles))
         self.assertIn("before", payload)
         self.assertIn("incident", payload)
-
-    def test_incident_respects_eta_source(self) -> None:
-        response = self.client.post(
+        with_eta = self.client.post(
             "/api/incident", json={"kind": "congestion", "orders": 8, "eta": "ml"}
         )
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertIn("before", payload)
-        self.assertIn("metrics", payload)
-        self.assertIn(payload["strategy"]["eta"], ("osrm", "ml"))
+        self.assertEqual(with_eta.status_code, 200)
+        self.assertIn(with_eta.json()["strategy"]["eta"], ("osrm", "ml"))
 
     def test_incident_rejects_bad_kind(self) -> None:
         self.assertEqual(

@@ -7,8 +7,8 @@ và đã xử lý đến đâu. Cái nào chưa xử lý được thì nói rõ 
 
 | Điểm yếu (góc nhìn giảng viên) | Mức | Đã xử lý |
 |---|---|---|
-| **Không có kiểm thử tự động** — không chứng minh được code chạy đúng, sửa là vỡ | Nặng | Thêm `tests/` gồm **144 ca** `unittest`: mạng lưới/A*, Hungarian đối chiếu vét cạn, 2-opt không làm xấu, 12 luật vận hành, tác tử, API, nhập CSV + lịch sử, bảo mật, toàn vẹn dữ liệu. Chạy: `python -m unittest discover -s tests -v` |
-| **Không có CI** — không ai kiểm tra mỗi lần push | Nặng | `.github/workflows/ci.yml` + `.github/workflows/e2e.yml`: cài phụ thuộc, chạy 144 unit test + coverage, `node --check` cho JS, smoke test E2E bằng Playwright |
+| **Không có kiểm thử tự động** — không chứng minh được code chạy đúng, sửa là vỡ | Nặng | Thêm `tests/` gồm **143 ca** `unittest`: mạng lưới/A*, Hungarian đối chiếu vét cạn, 2-opt không làm xấu, 12 luật vận hành, tác tử, API, nhập CSV + lịch sử, bảo mật, toàn vẹn dữ liệu. Chạy: `python -m unittest discover -s tests -v` |
+| **Không có CI** — không ai kiểm tra mỗi lần push | Nặng | `.github/workflows/ci.yml` + `.github/workflows/e2e.yml`: cài phụ thuộc, chạy 143 unit test + coverage, `node --check` cho JS, smoke test E2E bằng Playwright |
 | **README hứa A\* nhưng code không gọi A\*** — điểm yếu chết người nếu giảng viên grep | Nặng | A* được nối thật: thêm `RoutingView` + `congestion_edges`; sự cố kẹt xe chặn các chặng xuyên tâm, A* tìm đường vòng, nhật ký ghi "A* tìm đường vòng tránh vùng ùn tắc: 2 chặng phải đi vòng, cộng thêm 6,8 km". Có test riêng khẳng định đường vòng không đi qua chặng bị cấm |
 | **Chia train/test ngẫu nhiên** cho dữ liệu thời gian → dễ rò rỉ, kết quả lạc quan | Trung bình | Thêm giao thức **temporal** (train ngày 1–24, test ngày 25–31) làm kết quả chính; giữ random 80/20 để so sánh. Hai giao thức chênh ≤ 0,06 phút MAE → kết luận vững |
 | **Chỉ có hai mô hình**, không có mốc trên mạnh hơn | Nhẹ | Thêm **Gradient Boosting** (`HistGradientBoosting`); chỉ hơn Random Forest 0,06 phút → chứng minh cây đã đủ tốt, không cần mô hình nặng |
@@ -30,7 +30,7 @@ và đã xử lý đến đâu. Cái nào chưa xử lý được thì nói rõ 
 ## Cách tự kiểm tra trong 1 phút
 
 ```powershell
-python -m unittest discover -s tests -v     # 144 ca
+python -m unittest discover -s tests -v     # 143 ca
 python ml/train_eta.py                      # in cả hai giao thức
 python -m backend.dispatch.rule_stats       # thống kê luật
 ```
