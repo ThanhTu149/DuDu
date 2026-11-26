@@ -21,12 +21,30 @@ Set-Location $root
 function Test-PythonDeps {
     param([string]$Exe)
     if (-not $Exe) { return $false }
+    $oldEap = $ErrorActionPreference
     try {
-        & $Exe -c "import fastapi, uvicorn" *> $null
+        $ErrorActionPreference = "Continue"
+        & $Exe -W ignore -c "import fastapi, uvicorn" *> $null
         return ($LASTEXITCODE -eq 0)
     } catch {
         return $false
+    } finally {
+        $ErrorActionPreference = $oldEap
     }
+}
+
+function Find-AnyPython {
+    foreach ($cmd in @("python", "python3")) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) { return $cmd }
+    }
+    $runtimeDir = Join-Path $HOME ".dsh\dsh-runtimes"
+    if (Test-Path $runtimeDir) {
+        $found = Get-ChildItem $runtimeDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Join-Path $_.FullName "dependencies\python\python.exe"
+        } | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($found) { return $found }
+    }
+    return $null
 }
 
 function Resolve-Python {
@@ -81,6 +99,22 @@ function Test-DuDuRunning {
 }
 
 $python = Resolve-Python
+if (-not $python) {
+    $basePy = Find-AnyPython
+    if ($basePy) {
+        Write-Host ""
+        Write-Host "  Đang tự động cài đặt thư viện cần thiết (fastapi, uvicorn...) cho lần chạy đầu tiên..." -ForegroundColor Cyan
+        $oldEap = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "Continue"
+            & $basePy -m pip install --quiet -r (Join-Path $root "requirements.txt")
+        } catch {}
+        finally {
+            $ErrorActionPreference = $oldEap
+        }
+        $python = Resolve-Python
+    }
+}
 if (-not $python) {
     Write-Host ""
     Write-Host "  Chưa tìm thấy Python có đủ thư viện (fastapi, uvicorn)." -ForegroundColor Yellow
